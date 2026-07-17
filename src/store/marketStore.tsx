@@ -3,11 +3,9 @@ import { Candidate } from '../types/scanner';
 import { candidatesMockData } from '../data/scannerMockData';
 import { PortfolioHolding, PortfolioSummary } from '../types/portfolio';
 import { portfolioHoldingsMockData, portfolioSummaryMockData } from '../data/portfolioMockData';
-import { JournalEntry, JournalStatus } from '../types/journal';
+import { JournalEntry } from '../types/journal';
 import { journalEntriesMockData } from '../data/journalMockData';
 import { WatchlistItemAlert } from '../types/watchlist';
-
-// Module-specific imports
 import { RegimeState } from '../types/marketRegime';
 import { BacktestConfig, BacktestResult } from '../types/backtest';
 import { backtestResultsMock } from '../data/backtestMockData';
@@ -40,10 +38,21 @@ const initialFilters: ScannerFilters = {
   excludeLowLiquidity: false,
 };
 
+const emptyPortfolioSummary: PortfolioSummary = {
+  portfolioValue: 0,
+  totalCost: 0,
+  unrealizedPL: 0,
+  unrealizedPLPercent: 0,
+  todayPL: 0,
+  todayPLPercent: 0,
+  cashAllocation: 0,
+  cashValue: 0,
+  healthScore: 0,
+};
+
 interface MarketContextType {
   candidates: Candidate[];
-  
-  // Watchlist
+
   watchlistSymbols: string[];
   addToWatchlist: (symbol: string) => void;
   removeFromWatchlist: (symbol: string) => void;
@@ -52,7 +61,6 @@ interface MarketContextType {
   removeWatchlistAlert: (symbol: string, index: number) => void;
   clearWatchlist: () => void;
 
-  // Scanner/Signals
   selectedScannerCandidateId: string | null;
   setSelectedScannerCandidateId: (id: string | null) => void;
   selectedSignalCandidateId: string | null;
@@ -66,7 +74,6 @@ interface MarketContextType {
   isScanning: boolean;
   scanTimestamp: string;
 
-  // Portfolio
   isPortfolioConnected: boolean;
   setIsPortfolioConnected: (connected: boolean) => void;
   portfolioHoldings: PortfolioHolding[];
@@ -77,7 +84,6 @@ interface MarketContextType {
   addPortfolioHoldingNote: (symbol: string, note: string) => void;
   recordPortfolioExit: (symbol: string, exitPrice: number, quantity: number, exitReason: string) => void;
 
-  // Journal
   journalEntries: JournalEntry[];
   setJournalEntries: React.Dispatch<React.SetStateAction<JournalEntry[]>>;
   addJournalEntry: (entry: Omit<JournalEntry, 'id'>) => void;
@@ -86,7 +92,6 @@ interface MarketContextType {
   clearJournal: () => void;
   loadDemoJournal: () => void;
 
-  // Market Regime Module
   regimePeriod: '1M' | '3M' | '6M' | '1Y';
   setRegimePeriod: (period: '1M' | '3M' | '6M' | '1Y') => void;
   activeRegimeState: RegimeState;
@@ -95,14 +100,12 @@ interface MarketContextType {
   runRegimeRefresh: () => Promise<void>;
   isRefreshingRegime: boolean;
 
-  // Sector Analysis Module
   selectedSectorId: string | null;
   setSelectedSectorId: (id: string | null) => void;
   sectorTimestamp: string;
   runSectorRefresh: () => Promise<void>;
   isRefreshingSectors: boolean;
 
-  // Strategy Backtest Module
   backtestConfig: BacktestConfig;
   setBacktestConfig: React.Dispatch<React.SetStateAction<BacktestConfig>>;
   isBacktestLoaded: boolean;
@@ -116,17 +119,14 @@ interface MarketContextType {
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
 export function MarketProvider({ children }: { children: ReactNode }) {
-  // Core Scanner Candidates
   const [candidates] = useState<Candidate[]>(candidatesMockData);
-  
-  // Watchlist State
+
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>(['GP', 'BATBC', 'SQURPHARMA']);
   const [watchlistAlerts, setWatchlistAlerts] = useState<Record<string, WatchlistItemAlert[]>>({
-    'GP': [{ enabled: true, type: 'PRICE_ABOVE', value: 290.0, createdAt: '16 Jul 2026' }],
-    'SQURPHARMA': [{ enabled: true, type: 'ENTRY_READY', value: 0, createdAt: '16 Jul 2026' }]
+    GP: [{ enabled: true, type: 'PRICE_ABOVE', value: 290.0, createdAt: '16 Jul 2026' }],
+    SQURPHARMA: [{ enabled: true, type: 'ENTRY_READY', value: 0, createdAt: '16 Jul 2026' }],
   });
 
-  // Scanner UI States
   const [selectedScannerCandidateId, setSelectedScannerCandidateId] = useState<string | null>(null);
   const [selectedSignalCandidateId, setSelectedSignalCandidateId] = useState<string | null>(null);
   const [scannerFilters, setScannerFilters] = useState<ScannerFilters>(initialFilters);
@@ -134,26 +134,21 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanTimestamp, setScanTimestamp] = useState<string>('16 Jul 2026 14:00');
 
-  // Portfolio State
-  const [isPortfolioConnected, setIsPortfolioConnected] = useState<boolean>(true);
-  const [portfolioHoldings, setPortfolioHoldings] = useState<PortfolioHolding[]>(portfolioHoldingsMockData);
-  const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary>(portfolioSummaryMockData);
+  const [isPortfolioConnected, setIsPortfolioConnected] = useState<boolean>(false);
+  const [portfolioHoldings, setPortfolioHoldings] = useState<PortfolioHolding[]>([]);
+  const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary>(emptyPortfolioSummary);
 
-  // Journal State
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(journalEntriesMockData);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
 
-  // Market Regime State
   const [regimePeriod, setRegimePeriod] = useState<'1M' | '3M' | '6M' | '1Y'>('3M');
   const [activeRegimeState, setActiveRegimeState] = useState<RegimeState>('Neutral');
   const [isRefreshingRegime, setIsRefreshingRegime] = useState<boolean>(false);
   const [regimeTimestamp, setRegimeTimestamp] = useState<string>('16 Jul 2026 21:50');
 
-  // Sector Analysis State
   const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
   const [isRefreshingSectors, setIsRefreshingSectors] = useState<boolean>(false);
   const [sectorTimestamp, setSectorTimestamp] = useState<string>('16 Jul 2026 21:50');
 
-  // Strategy Backtest State
   const [backtestConfig, setBacktestConfig] = useState<BacktestConfig>({
     strategy: 'SMA 20/50 Crossover',
     symbol: 'ALL',
@@ -184,34 +179,34 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     ? backtestResultsMock[backtestConfig.strategy] || backtestResultsMock['SMA 20/50 Crossover']
     : null;
 
-  // Actions
+  const timestamp = () => {
+    const d = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `16 Jul 2026 ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  };
+
   const runRegimeRefresh = async () => {
     setIsRefreshingRegime(true);
     await new Promise((resolve) => setTimeout(resolve, 800));
-    const d = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    setRegimeTimestamp(`16 Jul 2026 ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);
+    setRegimeTimestamp(timestamp());
     setIsRefreshingRegime(false);
   };
 
   const runSectorRefresh = async () => {
     setIsRefreshingSectors(true);
     await new Promise((resolve) => setTimeout(resolve, 800));
-    const d = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    setSectorTimestamp(`16 Jul 2026 ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);
+    setSectorTimestamp(timestamp());
     setIsRefreshingSectors(false);
   };
 
   const runDemoBacktest = async () => {
     setIsBacktesting(true);
     setIsBacktestLoaded(false);
-    await new Promise((resolve) => setTimeout(resolve, 1200)); // Simulated backtest processing
+    await new Promise((resolve) => setTimeout(resolve, 1200));
     setIsBacktestLoaded(true);
     setIsBacktesting(false);
   };
 
-  // Watchlist Actions
   const addToWatchlist = (symbol: string) => {
     if (!watchlistSymbols.includes(symbol)) {
       setWatchlistSymbols((prev) => [...prev, symbol]);
@@ -220,7 +215,6 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
   const removeFromWatchlist = (symbol: string) => {
     setWatchlistSymbols((prev) => prev.filter((s) => s !== symbol));
-    // Also clean alerts for that symbol
     setWatchlistAlerts((prev) => {
       const copy = { ...prev };
       delete copy[symbol];
@@ -233,7 +227,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
       const list = prev[symbol] || [];
       return {
         ...prev,
-        [symbol]: [...list, { ...alert, createdAt: new Date().toLocaleDateString() }],
+        [symbol]: [...list, { ...alert, createdAt: new Date().toLocaleDateString('en-GB') }],
       };
     });
   };
@@ -253,21 +247,17 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     setWatchlistAlerts({});
   };
 
-  // Scanner Actions
   const resetScannerFilters = () => {
     setScannerFilters(initialFilters);
   };
 
   const runDemoScan = async () => {
     setIsScanning(true);
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Short realistic demo lag
-    const d = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    setScanTimestamp(`16 Jul 2026 ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setScanTimestamp(timestamp());
     setIsScanning(false);
   };
 
-  // Portfolio Actions
   const loadDemoPortfolio = () => {
     setIsPortfolioConnected(true);
     setPortfolioHoldings(portfolioHoldingsMockData);
@@ -277,16 +267,14 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const disconnectPortfolio = () => {
     setIsPortfolioConnected(false);
     setPortfolioHoldings([]);
+    setPortfolioSummary(emptyPortfolioSummary);
   };
 
   const addPortfolioHoldingNote = (symbol: string, note: string) => {
     setPortfolioHoldings((prev) =>
-      prev.map((hold) => {
-        if (hold.symbol === symbol) {
-          return { ...hold, notes: note, notesUpdatedAt: new Date().toLocaleDateString('en-GB') };
-        }
-        return hold;
-      })
+      prev.map((hold) =>
+        hold.symbol === symbol ? { ...hold, notes: note, notesUpdatedAt: new Date().toLocaleDateString('en-GB') } : hold
+      )
     );
   };
 
@@ -295,34 +283,25 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     if (!holding) return;
 
     const qtyToExit = Math.min(quantity, holding.quantity);
-    const costBasis = qtyToExit * holding.averageCost;
-    const realizedVal = qtyToExit * exitPrice;
-    const realizedPL = realizedVal - costBasis;
+    const realizedPL = qtyToExit * exitPrice - qtyToExit * holding.averageCost;
 
-    // Reduce or remove the holding
     setPortfolioHoldings((prev) =>
       prev
         .map((h) => {
-          if (h.symbol === symbol) {
-            const newQty = h.quantity - qtyToExit;
-            if (newQty <= 0) return null;
-            const marketValue = newQty * h.lastPrice;
-            const unrealizedPL = marketValue - newQty * h.averageCost;
-            const unrealizedPLPercent = h.averageCost > 0 ? (unrealizedPL / (newQty * h.averageCost)) * 100 : 0;
-            return {
-              ...h,
-              quantity: newQty,
-              marketValue,
-              unrealizedPL,
-              unrealizedPLPercent,
-            };
-          }
-          return h;
+          if (h.symbol !== symbol) return h;
+          const newQty = h.quantity - qtyToExit;
+          if (newQty <= 0) return null;
+          const marketValue = newQty * h.lastPrice;
+          const costBasis = newQty * h.averageCost;
+          const unrealizedPL = marketValue - costBasis;
+          const unrealizedPLPercent = costBasis > 0 ? (unrealizedPL / costBasis) * 100 : 0;
+          return { ...h, quantity: newQty, marketValue, unrealizedPL, unrealizedPLPercent };
         })
         .filter((h): h is PortfolioHolding => h !== null)
     );
 
-    // Create a closed trade entry in the Trade Journal
+    const fee = 150;
+    const plannedRisk = qtyToExit * Math.abs(holding.averageCost * 0.05);
     const newJournalEntry: JournalEntry = {
       id: `journ-exit-${Date.now()}`,
       symbol: holding.symbol,
@@ -338,109 +317,76 @@ export function MarketProvider({ children }: { children: ReactNode }) {
       target1: holding.averageCost * 1.15,
       target2: holding.averageCost * 1.25,
       quantity: qtyToExit,
-      plannedRisk: qtyToExit * (holding.averageCost * 0.05),
+      plannedRisk,
       expectedRR: 3.0,
       status: 'CLOSED',
       exitPrice,
       exitDate: new Date().toISOString().split('T')[0],
-      fees: 150,
-      realizedPL: realizedPL - 150,
-      rMultiple: parseFloat(((realizedPL - 150) / (qtyToExit * (holding.averageCost * 0.05) || 1)).toFixed(2)),
-      entryReason: 'Position imported from Portfolio holding.',
+      fees: fee,
+      realizedPL: realizedPL - fee,
+      rMultiple: plannedRisk > 0 ? parseFloat(((realizedPL - fee) / plannedRisk).toFixed(2)) : 0,
+      entryReason: 'Position imported from local demo portfolio state.',
       exitReason,
-      whatWentWell: 'Position exit managed and logged via Portfolio controls.',
+      whatWentWell: 'Recorded exit was logged locally for journal review.',
       whatWentWrong: '',
       ruleFollowed: true,
       mistakeTags: [],
       emotionalState: 'Neutral',
-      notes: `Note from portfolio: ${holding.notes}`,
-      tags: ['PortfolioExit'],
+      notes: `Local portfolio note: ${holding.notes}`,
+      tags: ['PortfolioExit', 'LocalOnly'],
     };
 
     setJournalEntries((prev) => [newJournalEntry, ...prev]);
 
-    // Re-calculate Portfolio Summary values based on updated holdings
-    setPortfolioSummary((prev) => {
-      const updatedHoldings = portfolioHoldings.map((h) => {
-        if (h.symbol === symbol) {
-          const newQty = h.quantity - qtyToExit;
-          return { ...h, quantity: newQty };
-        }
-        return h;
-      }).filter(h => h.quantity > 0);
-
-      const totalMarketVal = updatedHoldings.reduce((sum, h) => sum + h.quantity * h.lastPrice, 0);
-      const totalCostBasis = updatedHoldings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
-      const unrealizedPL = totalMarketVal - totalCostBasis;
-      const unrealizedPLPercent = totalCostBasis > 0 ? (unrealizedPL / totalCostBasis) * 100 : 0;
-
-      return {
-        ...prev,
-        portfolioValue: totalMarketVal,
-        totalCost: totalCostBasis,
-        unrealizedPL,
-        unrealizedPLPercent,
-      };
-    });
+    const updatedHoldings = portfolioHoldings
+      .map((h) => (h.symbol === symbol ? { ...h, quantity: h.quantity - qtyToExit } : h))
+      .filter((h) => h.quantity > 0);
+    const totalMarketVal = updatedHoldings.reduce((sum, h) => sum + h.quantity * h.lastPrice, 0);
+    const totalCostBasis = updatedHoldings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
+    const unrealizedPL = totalMarketVal - totalCostBasis;
+    setPortfolioSummary((prev) => ({
+      ...prev,
+      portfolioValue: totalMarketVal,
+      totalCost: totalCostBasis,
+      unrealizedPL,
+      unrealizedPLPercent: totalCostBasis > 0 ? (unrealizedPL / totalCostBasis) * 100 : 0,
+    }));
   };
 
-  // Journal Actions
   const addJournalEntry = (entry: Omit<JournalEntry, 'id'>) => {
-    const newEntry: JournalEntry = {
-      ...entry,
-      id: `journ-${Date.now()}`,
-    };
-    setJournalEntries((prev) => [newEntry, ...prev]);
+    setJournalEntries((prev) => [{ ...entry, id: `journ-${Date.now()}` }, ...prev]);
   };
 
   const updateJournalEntry = (id: string, entryUpdates: Partial<JournalEntry>) => {
     setJournalEntries((prev) =>
       prev.map((entry) => {
-        if (entry.id === id) {
-          const updated = { ...entry, ...entryUpdates };
-          // Re-calculate plannedRisk & expectedRR if relevant parameters change
-          if (entryUpdates.quantity || entryUpdates.entryPrice || entryUpdates.stopLoss) {
-            updated.plannedRisk = updated.quantity * Math.abs(updated.entryPrice - updated.stopLoss);
-          }
-          if (entryUpdates.entryPrice || entryUpdates.stopLoss || entryUpdates.target1) {
-            const riskPerShare = Math.abs(updated.entryPrice - updated.stopLoss);
-            updated.expectedRR = riskPerShare > 0 ? (updated.target1 - updated.entryPrice) / riskPerShare : 0;
-          }
-          // Re-calculate realizedPL & rMultiple if exit parameters change
-          if (updated.status === 'CLOSED' && updated.exitPrice !== undefined) {
-            const priceDiff = updated.side === 'LONG' 
-              ? (updated.exitPrice - updated.entryPrice) 
-              : (updated.entryPrice - updated.exitPrice);
-            const rawPL = updated.quantity * priceDiff;
-            const fees = updated.fees || 0;
-            updated.realizedPL = rawPL - fees;
-            updated.rMultiple = updated.plannedRisk > 0 ? updated.realizedPL / updated.plannedRisk : 0;
-          }
-          return updated;
+        if (entry.id !== id) return entry;
+        const updated = { ...entry, ...entryUpdates };
+        if (entryUpdates.quantity || entryUpdates.entryPrice || entryUpdates.stopLoss) {
+          updated.plannedRisk = updated.quantity * Math.abs(updated.entryPrice - updated.stopLoss);
         }
-        return entry;
+        if (entryUpdates.entryPrice || entryUpdates.stopLoss || entryUpdates.target1) {
+          const riskPerShare = Math.abs(updated.entryPrice - updated.stopLoss);
+          updated.expectedRR = riskPerShare > 0 ? (updated.target1 - updated.entryPrice) / riskPerShare : 0;
+        }
+        if (updated.status === 'CLOSED' && updated.exitPrice !== undefined) {
+          const priceDiff = updated.side === 'LONG' ? updated.exitPrice - updated.entryPrice : updated.entryPrice - updated.exitPrice;
+          updated.realizedPL = updated.quantity * priceDiff - (updated.fees || 0);
+          updated.rMultiple = updated.plannedRisk > 0 ? updated.realizedPL / updated.plannedRisk : 0;
+        }
+        return updated;
       })
     );
   };
 
-  const deleteJournalEntry = (id: string) => {
-    setJournalEntries((prev) => prev.filter((entry) => entry.id !== id));
-  };
-
-  const clearJournal = () => {
-    setJournalEntries([]);
-  };
-
-  const loadDemoJournal = () => {
-    setJournalEntries(journalEntriesMockData);
-  };
+  const deleteJournalEntry = (id: string) => setJournalEntries((prev) => prev.filter((entry) => entry.id !== id));
+  const clearJournal = () => setJournalEntries([]);
+  const loadDemoJournal = () => setJournalEntries(journalEntriesMockData);
 
   return (
     <MarketContext.Provider
       value={{
         candidates,
-        
-        // Watchlist
         watchlistSymbols,
         addToWatchlist,
         removeFromWatchlist,
@@ -448,8 +394,6 @@ export function MarketProvider({ children }: { children: ReactNode }) {
         addWatchlistAlert,
         removeWatchlistAlert,
         clearWatchlist,
-
-        // Scanner/Signals
         selectedScannerCandidateId,
         setSelectedScannerCandidateId,
         selectedSignalCandidateId,
@@ -462,8 +406,6 @@ export function MarketProvider({ children }: { children: ReactNode }) {
         runDemoScan,
         isScanning,
         scanTimestamp,
-
-        // Portfolio
         isPortfolioConnected,
         setIsPortfolioConnected,
         portfolioHoldings,
@@ -473,8 +415,6 @@ export function MarketProvider({ children }: { children: ReactNode }) {
         disconnectPortfolio,
         addPortfolioHoldingNote,
         recordPortfolioExit,
-
-        // Journal
         journalEntries,
         setJournalEntries,
         addJournalEntry,
@@ -482,8 +422,6 @@ export function MarketProvider({ children }: { children: ReactNode }) {
         deleteJournalEntry,
         clearJournal,
         loadDemoJournal,
-
-        // Market Regime Module
         regimePeriod,
         setRegimePeriod,
         activeRegimeState,
@@ -491,15 +429,11 @@ export function MarketProvider({ children }: { children: ReactNode }) {
         regimeTimestamp,
         runRegimeRefresh,
         isRefreshingRegime,
-
-        // Sector Analysis Module
         selectedSectorId,
         setSelectedSectorId,
         sectorTimestamp,
         runSectorRefresh,
         isRefreshingSectors,
-
-        // Strategy Backtest Module
         backtestConfig,
         setBacktestConfig,
         isBacktestLoaded,
