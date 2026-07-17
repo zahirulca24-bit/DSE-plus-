@@ -1,9 +1,9 @@
 import { env, hasDseApiBaseUrl } from '../config/env';
 import { ApiResult } from '../types/api';
 
-const DEFAULT_TIMEOUT_MS = 8000;
+const DEFAULT_TIMEOUT_MS = 15000;
 
-export async function apiGet<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiResult<T>> {
+async function apiRequest<T>(path: string, init: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiResult<T>> {
   if (!hasDseApiBaseUrl || !env.dseApiBaseUrl) {
     return { ok: false, status: null, data: null, error: 'VITE_DSE_API_BASE_URL is not configured.' };
   }
@@ -13,7 +13,11 @@ export async function apiGet<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): P
 
   try {
     const base = env.dseApiBaseUrl.replace(/\/$/, '');
-    const response = await fetch(`${base}${path}`, { method: 'GET', signal: controller.signal, headers: { Accept: 'application/json' } });
+    const response = await fetch(`${base}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: { Accept: 'application/json', ...(init.headers || {}) },
+    });
     const text = await response.text();
     let data: T | null = null;
 
@@ -31,4 +35,12 @@ export async function apiGet<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): P
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+export function apiGet<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiResult<T>> {
+  return apiRequest<T>(path, { method: 'GET' }, timeoutMs);
+}
+
+export function apiPost<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiResult<T>> {
+  return apiRequest<T>(path, { method: 'POST' }, timeoutMs);
 }
