@@ -5,6 +5,7 @@ export interface ApiHealthResponse {
   app?: string;
   version?: string;
   mode?: string;
+  market?: string;
   market_open_now?: boolean;
   [key: string]: unknown;
 }
@@ -14,4 +15,68 @@ export interface ApiResult<T> {
   status: number | null;
   data: T | null;
   error: string | null;
+}
+
+export type DseSignalGrade = 'A+' | 'A' | 'B+' | 'REJECT';
+export type DseSignalStatus = 'qualified' | 'watch' | 'rejected';
+export type DseEntryStatus = 'READY' | 'NEAR' | 'WATCH' | 'NOT_READY';
+export type DseTrend = 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+
+export interface DseBackendCandidate {
+  symbol: string;
+  company?: string | null;
+  sector?: string | null;
+  grade: DseSignalGrade;
+  score: number;
+  signal_status?: DseSignalStatus;
+  entry_status?: DseEntryStatus;
+  setup?: string;
+  latest_close?: number;
+  trade_date?: string;
+  trend?: DseTrend;
+  ema20?: number;
+  ema50?: number;
+  sma20?: number;
+  sma50?: number;
+  rsi14?: number;
+  volume_ratio?: number;
+  risk_reward?: number;
+  reasons?: string[];
+  warnings?: string[];
+  data_mode?: string;
+}
+
+export interface DseSignalsResponse {
+  mode: string;
+  data_source: string;
+  signals: DseBackendCandidate[];
+  rules?: Record<string, string>;
+}
+
+export interface DseScannerLatestResponse {
+  ok: boolean;
+  mode: string;
+  data_source: string;
+  scanned_symbols: number;
+  eligible_symbols: number;
+  qualified_count: number;
+  watch_count: number;
+  rejected_count: number;
+  generated_at?: string | null;
+  message?: string;
+  candidates: DseBackendCandidate[];
+}
+
+export interface DseStatusResponse {
+  status?: string;
+  mode?: string;
+  data_source?: string;
+  backend_ready?: boolean;
+  database_connected?: boolean;
+  live_market_connected?: boolean;
+  broker_connected?: boolean;
+  last_data_date?: string | null;
+  symbols_count?: number | null;
+  rows_count?: number | null;
+  message?: string;
 }
