@@ -18,6 +18,7 @@ import SectorAnalysis from './pages/SectorAnalysis';
 import Backtest from './pages/Backtest';
 import Alerts from './pages/Alerts';
 import DataImport from './pages/DataImport';
+import DataCollector from './pages/DataCollector';
 import Settings from './pages/Settings';
 
 export default function App() {
@@ -68,6 +69,7 @@ export default function App() {
                   <Route path="/backtest" element={<Backtest />} />
                   <Route path="/alerts" element={<Alerts />} />
                   <Route path="/data-import" element={<DataImport />} />
+                  <Route path="/data-collector" element={<DataCollector />} />
                   <Route path="/settings" element={<Settings />} />
 
                   {/* Root Redirection & Fallback */}
@@ -82,4 +84,3 @@ export default function App() {
     </Router>
   );
 }
-
