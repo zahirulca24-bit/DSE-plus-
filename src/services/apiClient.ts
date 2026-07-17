@@ -29,7 +29,15 @@ async function apiRequest<T>(path: string, init: RequestInit, timeoutMs = DEFAUL
       }
     }
 
-    return { ok: response.ok, status: response.status, data, error: response.ok ? null : `HTTP ${response.status}` };
+    let error: string | null = null;
+    if (!response.ok) {
+      const detail = data && typeof data === 'object' && 'detail' in data
+        ? String((data as { detail?: unknown }).detail || '')
+        : '';
+      error = detail || `HTTP ${response.status}`;
+    }
+
+    return { ok: response.ok, status: response.status, data, error };
   } catch (error) {
     return { ok: false, status: null, data: null, error: error instanceof Error ? error.message : 'Unknown API error.' };
   } finally {
@@ -43,4 +51,21 @@ export function apiGet<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise
 
 export function apiPost<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiResult<T>> {
   return apiRequest<T>(path, { method: 'POST' }, timeoutMs);
+}
+
+export function apiPostJson<TResponse, TBody>(
+  path: string,
+  body: TBody,
+  headers: Record<string, string> = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<ApiResult<TResponse>> {
+  return apiRequest<TResponse>(
+    path,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    },
+    timeoutMs,
+  );
 }
