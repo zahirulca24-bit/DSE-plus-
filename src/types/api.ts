@@ -80,3 +80,34 @@ export interface DseStatusResponse {
   rows_count?: number | null;
   message?: string;
 }
+
+export type CollectorStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+export interface CollectorRunRequest {
+  trade_date: string | null;
+  collect_missing: boolean;
+}
+
+export interface CollectorRunResponse {
+  job_id: string;
+  status: CollectorStatus;
+  requested_trade_date: string;
+  source: string;
+  fetched_rows: number;
+  collected_symbols: number;
+  inserted_rows: number;
+  updated_rows: number;
+  invalid_rows: number;
+  missing_symbols: string[];
+  warnings: string[];
+  error_message: string | null;
+  scanner_refresh_required: boolean;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface CollectorHistoryResponse {
+  count: number;
+  jobs: CollectorRunResponse[];
+}
