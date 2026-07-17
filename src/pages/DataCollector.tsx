@@ -4,10 +4,10 @@ import {
   CalendarDays,
   CheckCircle2,
   Database,
+  KeyRound,
   LoaderCircle,
   Play,
   RefreshCw,
-  ShieldKeyhole,
 } from 'lucide-react';
 import PageContainer from '../components/PageContainer';
 import PageHeader from '../components/PageHeader';
@@ -123,7 +123,7 @@ export default function DataCollector() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <label className="space-y-2">
                 <span className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-text-secondary">
-                  <ShieldKeyhole className="h-3.5 w-3.5" /> Collector Token
+                  <KeyRound className="h-3.5 w-3.5" /> Collector Token
                 </span>
                 <input
                   type="password"
