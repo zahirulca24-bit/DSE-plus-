@@ -11,6 +11,7 @@ import {
   History,
   Bell,
   UploadCloud,
+  Database,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -35,6 +36,7 @@ export const sidebarItems = [
   { id: 'backtest', label: 'Backtest', path: '/backtest', icon: History },
   { id: 'alerts', label: 'Alerts', path: '/alerts', icon: Bell },
   { id: 'data-import', label: 'Data Import', path: '/data-import', icon: UploadCloud },
+  { id: 'data-collector', label: 'Data Collector', path: '/data-collector', icon: Database },
   { id: 'settings', label: 'Settings', path: '/settings', icon: Settings },
 ];
 
