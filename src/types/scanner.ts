@@ -1,0 +1,34 @@
+export interface Candidate {
+  id: string;
+  rank: number;
+  symbol: string;
+  company: string;
+  sector: string;
+  setup: string;
+  side: 'LONG' | 'SHORT';
+  grade: 'A+' | 'A' | 'B+' | 'REJECT';
+  score: number;
+  price: number;
+  changePercent: number;
+  relativeVolume: number;
+  averageVolume: string;
+  turnover: string;
+  rsi: number;
+  trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  emaAlignment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  entryStatus: 'READY' | 'NEAR' | 'WATCH';
+  entryLow: number;
+  entryHigh: number;
+  stopLoss: number;
+  target1: number;
+  target2: number;
+  target3: number;
+  riskReward: number;
+  support: number;
+  resistance: number;
+  qualificationReasons: string[];
+  missingConditions: string[];
+  rejectionReasons: string[];
+  updatedAt: string;
+  dataMode: string;
+}
