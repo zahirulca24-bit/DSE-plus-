@@ -6,7 +6,7 @@ export const candidatesMockData: Candidate[] = [
     rank: 1,
     symbol: 'SQURPHARMA',
     company: 'Square Pharmaceuticals Ltd.',
-    sector: 'Pharmaceuticals',
+    sector: 'Pharmaceuticals & Chemicals',
     setup: 'Bullish Flag Breakout',
     side: 'LONG',
     grade: 'A+',
@@ -30,10 +30,10 @@ export const candidatesMockData: Candidate[] = [
     support: 206.5,
     resistance: 220.0,
     qualificationReasons: [
-      'Clean high-volume breakout of 3-week flag consolidation pattern',
-      'Daily RSI (62) is in prime bullish acceleration territory',
-      'Perfect golden stack EMA alignment (10, 20, 50, 200 EMA)',
-      'Relative volume is 2.4x the 15-day average trading volume'
+      'Demo data shows a high-volume breakout from a multi-session consolidation pattern',
+      'Daily RSI is in a bullish acceleration range in this local dataset',
+      'EMA alignment is bullish in the demo technical context',
+      'Relative volume is above the local demo threshold'
     ],
     missingConditions: [],
     rejectionReasons: [],
@@ -45,7 +45,7 @@ export const candidatesMockData: Candidate[] = [
     rank: 2,
     symbol: 'GP',
     company: 'Grameenphone Ltd.',
-    sector: 'Telecommunications',
+    sector: 'Telecommunication',
     setup: 'Support Bounce & Higher Low',
     side: 'LONG',
     grade: 'A+',
@@ -69,9 +69,9 @@ export const candidatesMockData: Candidate[] = [
     support: 276.0,
     resistance: 295.0,
     qualificationReasons: [
-      'Bullish rejection wick off key horizontal support shelf at 276.0',
-      'RSI rebounding from oversold 40-midline cleanly',
-      'High-grade blue-chip market capitalization stabilizing index'
+      'Demo data shows a bullish reaction from a support area',
+      'RSI rebounds from a lower range into a neutral-bullish zone',
+      'Large-cap demo profile supports lower volatility in this sample'
     ],
     missingConditions: [],
     rejectionReasons: [],
@@ -107,9 +107,9 @@ export const candidatesMockData: Candidate[] = [
     support: 405.0,
     resistance: 432.0,
     qualificationReasons: [
-      'Completed a major double bottom reversal on the daily chart',
-      'MACD line crosses above signal line showing positive divergence',
-      'Strong institutional support buying observed at bottom range boundary'
+      'Demo structure resembles a double-bottom recovery pattern',
+      'Momentum indicator context is positive in this local sample',
+      'Support area remains intact in the demo dataset'
     ],
     missingConditions: [],
     rejectionReasons: [],
@@ -121,7 +121,7 @@ export const candidatesMockData: Candidate[] = [
     rank: 4,
     symbol: 'LHBL',
     company: 'LafargeHolcim Bangladesh Ltd.',
-    sector: 'Engineering',
+    sector: 'Cement',
     setup: 'Mean Reversion Stretch',
     side: 'LONG',
     grade: 'A',
@@ -145,8 +145,8 @@ export const candidatesMockData: Candidate[] = [
     support: 63.0,
     resistance: 70.0,
     qualificationReasons: [
-      'Weekly breakout retest held perfectly with expanding trade volumes',
-      'Favorable risk/reward asymmetry with close logical stop location'
+      'Demo data shows a breakout retest holding above a nearby level',
+      'Risk/reward display is favorable inside this deterministic demo case'
     ],
     missingConditions: [],
     rejectionReasons: [],
@@ -158,7 +158,7 @@ export const candidatesMockData: Candidate[] = [
     rank: 5,
     symbol: 'BEXIMCO',
     company: 'Beximco Limited',
-    sector: 'Textiles',
+    sector: 'Textile',
     setup: 'Ascending Triangle Compression',
     side: 'LONG',
     grade: 'B+',
@@ -183,9 +183,9 @@ export const candidatesMockData: Candidate[] = [
     resistance: 118.0,
     qualificationReasons: [],
     missingConditions: [
-      'Volume confirmation missing (currently trading at 0.9x relative volume)',
-      'Current price (115.6) is below preferred breakout trigger zone (118.0 - 120.0)',
-      'Diverging daily EMA 20 & 50 lines require close resolution'
+      'Volume confirmation is missing in the demo dataset',
+      'Current demo price is below the preferred trigger zone',
+      'EMA alignment remains neutral and requires confirmation'
     ],
     rejectionReasons: [],
     updatedAt: '16 Jul 2026 14:00',
@@ -196,7 +196,7 @@ export const candidatesMockData: Candidate[] = [
     rank: 6,
     symbol: 'CITYBANK',
     company: 'The City Bank Limited',
-    sector: 'Banking',
+    sector: 'Bank',
     setup: 'Consolidation Range Coil',
     side: 'LONG',
     grade: 'B+',
@@ -221,8 +221,8 @@ export const candidatesMockData: Candidate[] = [
     resistance: 25.5,
     qualificationReasons: [],
     missingConditions: [
-      'Price coiling inside minor trading range, trigger requires break of 25.5 resistance',
-      'Daily volume momentum remains sluggish and below key 15-day average'
+      'Demo price remains inside a minor range',
+      'Volume momentum is below the local demo threshold'
     ],
     rejectionReasons: [],
     updatedAt: '16 Jul 2026 14:00',
@@ -233,7 +233,7 @@ export const candidatesMockData: Candidate[] = [
     rank: 7,
     symbol: 'BRACBANK',
     company: 'BRAC Bank Limited',
-    sector: 'Banking',
+    sector: 'Bank',
     setup: 'Support Breakdown Attempt',
     side: 'SHORT',
     grade: 'REJECT',
@@ -259,9 +259,9 @@ export const candidatesMockData: Candidate[] = [
     qualificationReasons: [],
     missingConditions: [],
     rejectionReasons: [
-      'Grade score (82) fell below the required qualification threshold of 85',
-      'Short position signals are highly restricted under current DSE market regulations',
-      'Risk/reward profile is extremely low (1.85) and stop-loss distance is overly wide'
+      'Demo grade score fell below the qualification threshold of 85',
+      'Short-side demo setup is kept out of qualified signals',
+      'Risk/reward is below the preferred display threshold for this demo candidate'
     ],
     updatedAt: '16 Jul 2026 14:00',
     dataMode: 'Demo Data'
@@ -271,7 +271,7 @@ export const candidatesMockData: Candidate[] = [
     rank: 8,
     symbol: 'RENATA',
     company: 'Renata Limited',
-    sector: 'Pharmaceuticals',
+    sector: 'Pharmaceuticals & Chemicals',
     setup: 'Severe Overextension Rebound',
     side: 'LONG',
     grade: 'REJECT',
@@ -297,9 +297,9 @@ export const candidatesMockData: Candidate[] = [
     qualificationReasons: [],
     missingConditions: [],
     rejectionReasons: [
-      'Severe structural trend misalignment across multiple higher daily timeframes',
-      'DSE floor price rule restrictions block reliable price discovery during selloffs',
-      'Volume is heavily dominated by liquidation and programmatic institutional selling flow'
+      'Demo trend alignment is bearish across the displayed context',
+      'Price remains outside preferred local entry conditions',
+      'This item is demo-only and not financial advice'
     ],
     updatedAt: '16 Jul 2026 14:00',
     dataMode: 'Demo Data'
@@ -333,8 +333,8 @@ export const candidatesMockData: Candidate[] = [
     support: 665.0,
     resistance: 695.0,
     qualificationReasons: [
-      'Strong daily structure characterized by sequential higher-low formations',
-      'Daily trading volume compression suggests strong institutional hoarding/accumulation'
+      'Demo daily structure shows higher-low behavior',
+      'Demo volume compression is displayed as a setup context only'
     ],
     missingConditions: [],
     rejectionReasons: [],
@@ -370,8 +370,8 @@ export const candidatesMockData: Candidate[] = [
     support: 148.0,
     resistance: 158.0,
     qualificationReasons: [
-      'Precise candle rebound off structural 50-day EMA level',
-      'Stochastics crossover in neutral zone supports immediate upward trend continuation'
+      'Demo candle structure rebounds from a moving-average area',
+      'Momentum context supports the demo continuation classification'
     ],
     missingConditions: [],
     rejectionReasons: [],
