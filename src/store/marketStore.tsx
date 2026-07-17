@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { Candidate } from '../types/scanner';
 import { candidatesMockData } from '../data/scannerMockData';
 import { PortfolioHolding, PortfolioSummary } from '../types/portfolio';
@@ -9,6 +9,8 @@ import { WatchlistItemAlert } from '../types/watchlist';
 import { RegimeState } from '../types/marketRegime';
 import { BacktestConfig, BacktestResult } from '../types/backtest';
 import { backtestResultsMock } from '../data/backtestMockData';
+import { dseApi } from '../services/dseApi';
+import { DseBackendCandidate, DseScannerLatestResponse, DseSignalsResponse } from '../types/api';
 
 interface ScannerFilters {
   search: string;
@@ -52,6 +54,12 @@ const emptyPortfolioSummary: PortfolioSummary = {
 
 interface MarketContextType {
   candidates: Candidate[];
+  backendConnectionStatus: 'Not Configured' | 'Checking' | 'Connected' | 'Error';
+  backendMessage: string;
+  candidateDataSource: 'demo' | 'database' | 'local_csv';
+  scannerUniverseCount: number;
+  scannerEligibleCount: number;
+  refreshBackendData: () => Promise<void>;
 
   watchlistSymbols: string[];
   addToWatchlist: (symbol: string) => void;
@@ -118,8 +126,88 @@ interface MarketContextType {
 
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
+function formatDateTime(value?: string | null): string {
+  if (!value) return timestamp();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-GB', {
+    timeZone: 'Asia/Dhaka',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function timestamp() {
+  const d = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `17 Jul 2026 ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function mapEntryStatus(status?: string): Candidate['entryStatus'] {
+  if (status === 'READY' || status === 'NEAR' || status === 'WATCH') return status;
+  return 'WATCH';
+}
+
+function mapBackendCandidate(item: DseBackendCandidate, index: number, source: 'demo' | 'database' | 'local_csv'): Candidate {
+  const price = Number(item.latest_close ?? 0);
+  const trend = item.trend || 'NEUTRAL';
+  const riskReward = Number(item.risk_reward ?? 0);
+  const displayRisk = price > 0 ? price * 0.03 : 1;
+  const target1 = price > 0 ? price + displayRisk * Math.max(riskReward || 1, 1) : 0;
+  const stopLoss = price > 0 ? Math.max(price - displayRisk, 0) : 0;
+
+  return {
+    id: `api-${source}-${item.symbol}-${index}`,
+    rank: index + 1,
+    symbol: item.symbol,
+    company: item.company || `${item.symbol} — company metadata pending`,
+    sector: item.sector || 'Metadata Pending',
+    setup: item.setup || 'Scanner Setup',
+    side: trend === 'BEARISH' ? 'SHORT' : 'LONG',
+    grade: item.grade,
+    score: Number(item.score ?? 0),
+    price,
+    changePercent: 0,
+    relativeVolume: Number(item.volume_ratio ?? 0),
+    averageVolume: 'Backend derived',
+    turnover: 'Backend derived',
+    rsi: Number(item.rsi14 ?? 0),
+    trend,
+    emaAlignment: trend,
+    entryStatus: mapEntryStatus(item.entry_status),
+    entryLow: price,
+    entryHigh: price,
+    stopLoss,
+    target1,
+    target2: target1,
+    target3: target1,
+    riskReward,
+    support: stopLoss,
+    resistance: target1,
+    qualificationReasons: item.reasons || [],
+    missingConditions: item.warnings || [],
+    rejectionReasons: item.signal_status === 'rejected' ? item.warnings || ['Rejected by backend scanner rule.'] : [],
+    updatedAt: item.trade_date || timestamp(),
+    dataMode: item.data_mode || (source === 'database' ? 'Database' : source === 'local_csv' ? 'Local CSV' : 'Demo Data'),
+  };
+}
+
+function sourceFromBackend(value?: string): 'demo' | 'database' | 'local_csv' {
+  if (value === 'database') return 'database';
+  if (value === 'local_csv') return 'local_csv';
+  return 'demo';
+}
+
 export function MarketProvider({ children }: { children: ReactNode }) {
-  const [candidates] = useState<Candidate[]>(candidatesMockData);
+  const [candidates, setCandidates] = useState<Candidate[]>(candidatesMockData);
+  const [backendConnectionStatus, setBackendConnectionStatus] = useState<MarketContextType['backendConnectionStatus']>('Checking');
+  const [backendMessage, setBackendMessage] = useState<string>('Checking backend health...');
+  const [candidateDataSource, setCandidateDataSource] = useState<'demo' | 'database' | 'local_csv'>('demo');
+  const [scannerUniverseCount, setScannerUniverseCount] = useState<number>(395);
+  const [scannerEligibleCount, setScannerEligibleCount] = useState<number>(candidatesMockData.length);
 
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>(['GP', 'BATBC', 'SQURPHARMA']);
   const [watchlistAlerts, setWatchlistAlerts] = useState<Record<string, WatchlistItemAlert[]>>({
@@ -179,11 +267,51 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     ? backtestResultsMock[backtestConfig.strategy] || backtestResultsMock['SMA 20/50 Crossover']
     : null;
 
-  const timestamp = () => {
-    const d = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `16 Jul 2026 ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  };
+  const applyScannerResult = useCallback((payload: DseScannerLatestResponse) => {
+    const source = sourceFromBackend(payload.data_source);
+    setCandidates(payload.candidates.map((item, index) => mapBackendCandidate(item, index, source)));
+    setCandidateDataSource(source);
+    setScannerUniverseCount(payload.scanned_symbols || payload.candidates.length);
+    setScannerEligibleCount(payload.eligible_symbols || payload.candidates.length);
+    setScanTimestamp(formatDateTime(payload.generated_at));
+  }, []);
+
+  const applySignalsResult = useCallback((payload: DseSignalsResponse) => {
+    const source = sourceFromBackend(payload.data_source);
+    setCandidates(payload.signals.map((item, index) => mapBackendCandidate(item, index, source)));
+    setCandidateDataSource(source);
+    setScannerUniverseCount(payload.signals.length);
+    setScannerEligibleCount(payload.signals.length);
+  }, []);
+
+  const refreshBackendData = useCallback(async () => {
+    setBackendConnectionStatus('Checking');
+    const health = await dseApi.health();
+    if (!health.ok) {
+      setBackendConnectionStatus(health.error?.includes('not configured') ? 'Not Configured' : 'Error');
+      setBackendMessage(health.error || 'Backend health check failed. Demo data remains active.');
+      setCandidateDataSource('demo');
+      return;
+    }
+
+    setBackendConnectionStatus('Connected');
+    setBackendMessage(`Health endpoint responded OK: ${health.data?.app || 'DSE Pulse Backend'}`);
+
+    const latest = await dseApi.scannerLatest();
+    if (latest.ok && latest.data?.ok && latest.data.candidates.length > 0) {
+      applyScannerResult(latest.data);
+      return;
+    }
+
+    const signals = await dseApi.signals();
+    if (signals.ok && signals.data?.signals?.length) {
+      applySignalsResult(signals.data);
+    }
+  }, [applyScannerResult, applySignalsResult]);
+
+  useEffect(() => {
+    void refreshBackendData();
+  }, [refreshBackendData]);
 
   const runRegimeRefresh = async () => {
     setIsRefreshingRegime(true);
@@ -253,8 +381,13 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
   const runDemoScan = async () => {
     setIsScanning(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setScanTimestamp(timestamp());
+    const result = await dseApi.scannerRun();
+    if (result.ok && result.data?.ok) {
+      applyScannerResult(result.data);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setScanTimestamp(timestamp());
+    }
     setIsScanning(false);
   };
 
@@ -387,6 +520,12 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     <MarketContext.Provider
       value={{
         candidates,
+        backendConnectionStatus,
+        backendMessage,
+        candidateDataSource,
+        scannerUniverseCount,
+        scannerEligibleCount,
+        refreshBackendData,
         watchlistSymbols,
         addToWatchlist,
         removeFromWatchlist,
