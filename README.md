@@ -1,20 +1,36 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# DSE Pulse
 
-# Run and deploy your AI Studio app
+DSE Pulse is a Bangladesh Dhaka Stock Exchange frontend trading-terminal interface built with React, TypeScript, Vite, Tailwind CSS, Recharts, and Lucide React.
 
-This contains everything you need to run your app locally.
+## Current Status
 
-View your app in AI Studio: https://ai.studio/apps/d73c39cb-23d3-4160-ab65-c268b40ef769
+This repository currently contains a frontend demo/local-only application.
+
+- Live DSE market data: not connected yet
+- FastAPI backend integration: pending
+- Supabase integration: pending
+- Vercel deployment: pending
+- Broker/order execution: not included
+- Financial advice: not provided
+
+All visible market, scanner, portfolio, journal, sector, regime, and backtest values are deterministic demo/local data unless explicitly connected in a later integration phase.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+Prerequisites: Node.js
 
+```bash
+npm install
+npm run dev
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Build
+
+```bash
+npm run lint
+npm run build
+```
+
+## Important Notice
+
+DSE Pulse is not a broker, order-routing system, or investment-advice platform. Any signal, portfolio, journal, sector, regime, or backtest screen in the current version is for frontend interface validation only.
