@@ -1,6 +1,6 @@
 {
   "name": "DSE Pulse",
-  "description": "A production-quality Bangladesh stock market application shell and trading terminal.",
+  "description": "Bangladesh Dhaka Stock Exchange frontend trading-terminal interface in demo/local-only mode.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
