@@ -14,9 +14,9 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { dseApi } from '../services/dseApi';
 import {
+  BlobImportResponse,
+  BlobStatusResponse,
   DataStatusResponse,
-  DriveImportResponse,
-  DriveStatusResponse,
   OhlcPreviewResponse,
 } from '../types/api';
 
@@ -90,10 +90,10 @@ export default function DataImport() {
   const [totalRows, setTotalRows] = useState(0);
   const [lastPreview, setLastPreview] = useState('Not loaded');
   const [backendConnected, setBackendConnected] = useState(false);
-  const [driveStatus, setDriveStatus] = useState<DriveStatusResponse | null>(null);
+  const [blobStatus, setBlobStatus] = useState<BlobStatusResponse | null>(null);
   const [dataStatus, setDataStatus] = useState<DataStatusResponse | null>(null);
   const [backendPreview, setBackendPreview] = useState<OhlcPreviewResponse | null>(null);
-  const [importResult, setImportResult] = useState<DriveImportResponse | null>(null);
+  const [importResult, setImportResult] = useState<BlobImportResponse | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -120,15 +120,15 @@ export default function DataImport() {
 
   const refreshStatus = useCallback(async () => {
     setStatusLoading(true);
-    const [healthResult, driveResult, dataResult] = await Promise.all([
+    const [healthResult, blobResult, dataResult] = await Promise.all([
       dseApi.health(),
-      dseApi.driveStatus(),
+      dseApi.storageStatus(),
       dseApi.dataStatus(),
     ]);
 
     setBackendConnected(healthResult.ok);
     setBackendError(healthResult.ok ? null : healthResult.error || 'Backend is unavailable.');
-    setDriveStatus(driveResult.ok ? driveResult.data : null);
+    setBlobStatus(blobResult.ok ? blobResult.data : null);
     setDataStatus(dataResult.ok ? dataResult.data : null);
     setStatusLoading(false);
   }, []);
@@ -172,7 +172,7 @@ export default function DataImport() {
     setLastPreview(new Date().toLocaleString('en-GB'));
 
     if (!isOhlcImport) {
-      setNotice({ type: 'info', message: 'Local preview complete. Automatic Google Drive saving is currently enabled only for DSE OHLC Data.' });
+      setNotice({ type: 'info', message: 'Local preview complete. Automatic Vercel Blob saving is currently enabled only for DSE OHLC Data.' });
       return;
     }
 
@@ -196,59 +196,59 @@ export default function DataImport() {
     }
   };
 
-  const saveToDrive = async () => {
+  const saveToBlob = async () => {
     if (!selectedFile || !backendPreview?.ok) {
       setNotice({ type: 'error', message: 'Select and validate a DSE OHLC CSV first.' });
       return;
     }
-    if (!driveStatus?.configured) {
-      setNotice({ type: 'error', message: 'Google Drive storage is not configured on the backend yet.' });
+    if (!blobStatus?.configured) {
+      setNotice({ type: 'error', message: 'Vercel Blob storage is not configured on the backend yet.' });
       return;
     }
-    if (!driveStatus.connected) {
-      setNotice({ type: 'error', message: driveStatus.message || 'Google Drive storage is unavailable.' });
+    if (!blobStatus.connected) {
+      setNotice({ type: 'error', message: blobStatus.message || 'Vercel Blob storage is unavailable.' });
       return;
     }
 
     setSaving(true);
     setImportResult(null);
-    setNotice({ type: 'info', message: 'Merging validated OHLC rows and saving the master dataset to Google Drive…' });
+    setNotice({ type: 'info', message: 'Merging validated OHLC rows and saving the canonical master dataset to Vercel Blob…' });
 
-    const result = await dseApi.importOhlcToDrive(selectedFile);
+    const result = await dseApi.importOhlcToBlob(selectedFile);
     if (!result.ok || !result.data?.ok) {
       setSaving(false);
-      setNotice({ type: 'error', message: result.data?.message || result.error || 'Google Drive save failed.' });
+      setNotice({ type: 'error', message: result.data?.message || result.error || 'Vercel Blob save failed.' });
       return;
     }
 
     setImportResult(result.data);
     setNotice({
       type: 'success',
-      message: `Saved to Google Drive: ${formatCount(result.data.inserted_rows)} inserted, ${formatCount(result.data.updated_rows)} updated, ${formatCount(result.data.invalid_rows)} invalid.`,
+      message: `Saved to Vercel Blob: ${formatCount(result.data.inserted_rows)} inserted, ${formatCount(result.data.updated_rows)} updated, ${formatCount(result.data.invalid_rows)} invalid.`,
     });
     await refreshStatus();
     setSaving(false);
   };
 
-  const driveReady = Boolean(driveStatus?.configured && driveStatus.connected);
+  const blobReady = Boolean(blobStatus?.configured && blobStatus.connected);
   const fileReady = Boolean(selectedFile && isOhlcImport && backendPreview?.ok && missingColumns.length === 0);
-  const canSave = fileReady && driveReady && !saving && !previewLoading;
+  const canSave = fileReady && blobReady && !saving && !previewLoading;
 
   const pageBadge = importResult?.ok
     ? <StatusBadge status="positive" label="IMPORT COMPLETE" />
-    : driveReady && backendConnected
-      ? <StatusBadge status="positive" label="DRIVE STORAGE READY" />
+    : blobReady && backendConnected
+      ? <StatusBadge status="positive" label="BLOB STORAGE READY" />
       : backendConnected
-        ? <StatusBadge status="warning" label="DRIVE NOT READY" />
+        ? <StatusBadge status="warning" label="BLOB NOT READY" />
         : <StatusBadge status="negative" label="BACKEND OFFLINE" />;
 
   const storageMessage = !backendConnected
     ? `Backend connection failed. ${backendError || ''}`.trim()
-    : !driveStatus?.configured
-      ? 'Backend is connected, but Google Drive storage credentials are not configured yet.'
-      : !driveStatus.connected
-        ? driveStatus.message
-        : `Google Drive is connected to ${driveStatus.folder_name || 'the configured storage folder'}. Uploads will update ${driveStatus.master_filename}.`;
+    : !blobStatus?.configured
+      ? 'Backend is connected, but Vercel Blob storage is not configured yet.'
+      : !blobStatus.connected
+        ? blobStatus.message
+        : `Vercel Blob is connected. Canonical OHLC master: ${blobStatus.master_pathname}.`;
 
   const verifiedRows = importResult?.rows_count ?? dataStatus?.rows_count;
   const verifiedSymbols = importResult?.symbols_count ?? dataStatus?.symbols_count;
@@ -258,7 +258,7 @@ export default function DataImport() {
     <PageContainer id="data-import-route">
       <PageHeader
         title="Data Import"
-        description="Validate DSE OHLC files, save them through the backend, and automatically update the Google Drive master dataset."
+        description="Validate DSE OHLC files, save them through the backend, and automatically update the Vercel Blob canonical master dataset."
         breadcrumbs={[{ label: 'Data Import', path: '/data-import' }]}
         action={pageBadge}
       />
@@ -278,7 +278,7 @@ export default function DataImport() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <StatusCard label="Backend API" value={statusLoading ? 'Checking…' : backendConnected ? 'Connected' : 'Offline'} tone={backendConnected ? 'positive' : 'negative'} />
-          <StatusCard label="Google Drive" value={statusLoading ? 'Checking…' : driveReady ? 'Connected' : driveStatus?.configured ? 'Unavailable' : 'Not Configured'} tone={driveReady ? 'positive' : 'warning'} />
+          <StatusCard label="Vercel Blob" value={statusLoading ? 'Checking…' : blobReady ? 'Connected' : blobStatus?.configured ? 'Unavailable' : 'Not Configured'} tone={blobReady ? 'positive' : 'warning'} />
           <StatusCard label="Master Rows" value={formatCount(verifiedRows)} tone={verifiedRows ? 'positive' : 'neutral'} />
           <StatusCard label="Latest OHLC Date" value={verifiedLatestDate || 'Unknown'} tone={verifiedLatestDate ? 'positive' : 'neutral'} />
         </div>
@@ -302,8 +302,8 @@ export default function DataImport() {
         <div className="space-y-5 rounded-xl border border-border-dark bg-[#0D1117] p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-sm font-bold text-white">CSV Validation & Google Drive Save</h3>
-              <p className="text-xs text-text-secondary">The browser shows a quick preview. The backend validates, merges by symbol + trade_date, saves the master CSV to Drive, and refreshes its local cache.</p>
+              <h3 className="text-sm font-bold text-white">CSV Validation & Vercel Blob Save</h3>
+              <p className="text-xs text-text-secondary">The browser shows a quick preview. The backend validates, merges by symbol + trade_date, saves the canonical master CSV to Vercel Blob, and refreshes its local cache.</p>
             </div>
             <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-[#238636] px-4 py-2 text-xs font-mono font-bold text-white">
               <UploadCloud className="h-4 w-4" /> Select CSV
@@ -331,7 +331,7 @@ export default function DataImport() {
               <div>Backend invalid rows: <span className={backendPreview?.invalid_rows ? 'text-[#F85149]' : 'text-white'}>{formatCount(backendPreview?.invalid_rows)}</span></div>
               <div>Symbols detected: <span className="text-white">{formatCount(backendPreview?.symbols_count)}</span></div>
               <div>Latest file date: <span className="text-white">{backendPreview?.latest_trade_date || 'Unknown'}</span></div>
-              <div>Storage target: <span className="text-white">{driveStatus?.master_filename || 'Google Drive master CSV'}</span></div>
+              <div>Storage target: <span className="text-white">{blobStatus?.master_pathname || 'dse/DSE_OHLC_MASTER.csv'}</span></div>
             </div>
             {backendPreview?.warnings.length ? <div className="mt-3 text-[#D29922]">Warnings: {backendPreview.warnings.join(' ')}</div> : null}
             {backendPreview?.errors.length ? <div className="mt-3 text-[#F85149]">Errors: {backendPreview.errors.join(' ')}</div> : null}
@@ -353,23 +353,23 @@ export default function DataImport() {
 
           <div className="flex flex-col gap-3 rounded-lg border border-border-dark bg-[#161B22]/40 p-4 md:flex-row md:items-center md:justify-between">
             <div className="text-xs text-text-secondary">
-              <div className="font-bold text-white">Save destination: Google Drive</div>
+              <div className="font-bold text-white">Save destination: Vercel Blob</div>
               <div className="mt-1">Rows are upserted by <span className="font-mono text-white">symbol + trade_date</span>. Existing dates update; new dates append without duplicate keys.</div>
             </div>
             <button
               type="button"
-              onClick={() => void saveToDrive()}
+              onClick={() => void saveToBlob()}
               disabled={!canSave}
               className="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-md bg-[#238636] px-5 py-3 text-xs font-mono font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-[#21262D] disabled:text-text-secondary"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? 'Saving…' : 'Save to Google Drive'}
+              {saving ? 'Saving…' : 'Save to Vercel Blob'}
             </button>
           </div>
 
           {!isOhlcImport && (
             <div className="rounded-lg border border-[#58A6FF]/30 bg-[#58A6FF]/5 p-4 text-xs text-[#58A6FF]">
-              Automatic Drive saving is currently enabled for DSE OHLC Data. Other import categories remain preview-only until their storage schemas are added.
+              Automatic Vercel Blob saving is currently enabled for DSE OHLC Data. Other import categories remain preview-only until their storage schemas are added.
             </div>
           )}
 
@@ -377,7 +377,7 @@ export default function DataImport() {
 
           {importResult?.ok && (
             <div className="rounded-xl border border-[#238636]/40 bg-[#238636]/10 p-5">
-              <div className="flex items-center gap-2 text-sm font-bold text-[#3FB950]"><CheckCircle2 className="h-5 w-5" />Google Drive Import Verified</div>
+              <div className="flex items-center gap-2 text-sm font-bold text-[#3FB950]"><CheckCircle2 className="h-5 w-5" />Vercel Blob Import Verified</div>
               <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6">
                 <ResultMetric label="Inserted" value={formatCount(importResult.inserted_rows)} />
                 <ResultMetric label="Updated" value={formatCount(importResult.updated_rows)} />
@@ -387,15 +387,15 @@ export default function DataImport() {
                 <ResultMetric label="Latest Date" value={importResult.latest_trade_date || 'Unknown'} />
               </div>
               <div className="mt-4 border-t border-[#238636]/20 pt-4 text-xs text-text-secondary">
-                Canonical file: <span className="font-bold text-white">{importResult.master_filename}</span>. Google Drive master and the backend local cache were refreshed successfully.
+                Canonical pathname: <span className="font-bold text-white">{importResult.master_pathname}</span>. Vercel Blob master and the backend local cache were refreshed successfully.
               </div>
             </div>
           )}
         </div>
 
-        <div className={`rounded-xl border p-4 text-xs ${driveReady ? 'border-[#238636]/30 bg-[#238636]/5 text-[#3FB950]' : 'border-[#D29922]/30 bg-[#D29922]/5 text-[#D29922]'}`}>
+        <div className={`rounded-xl border p-4 text-xs ${blobReady ? 'border-[#238636]/30 bg-[#238636]/5 text-[#3FB950]' : 'border-[#D29922]/30 bg-[#D29922]/5 text-[#D29922]'}`}>
           <div className="flex items-start gap-2">
-            {driveReady ? <Cloud className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+            {blobReady ? <Cloud className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
             <span>{storageMessage}</span>
           </div>
         </div>
