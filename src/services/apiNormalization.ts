@@ -2,11 +2,10 @@ import { ApiResult, DseScannerLatestResponse, DseSignalsResponse } from '../type
 
 const REAL_STORAGE_SOURCES = new Set(['database', 'local_csv', 'google_drive', 'vercel_blob', 'blob']);
 
-function normalizeSource(value?: string): string | undefined {
-  if (!value) return value;
-  return REAL_STORAGE_SOURCES.has(value.toLowerCase())
-    ? value.toLowerCase() === 'database' ? 'database' : 'local_csv'
-    : value;
+function normalizeSource(value: string): string {
+  const normalized = value.toLowerCase();
+  if (!REAL_STORAGE_SOURCES.has(normalized)) return value;
+  return normalized === 'database' ? 'database' : 'local_csv';
 }
 
 export function normalizeScannerResult(
