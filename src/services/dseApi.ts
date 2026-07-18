@@ -7,6 +7,7 @@ import {
   DatabaseImportResponse,
   DatabaseInitResponse,
   DatabaseStatusResponse,
+  DataAuditResponse,
   DataSourceResponse,
   DataStatusResponse,
   DseScannerLatestResponse,
@@ -32,6 +33,7 @@ export const dseApi = {
   initializeDatabase: () => apiPost<DatabaseInitResponse>('/db/init', 30000),
   dataStatus: () => apiGet<DataStatusResponse>('/data/status'),
   dataSource: () => apiGet<DataSourceResponse>('/data/source'),
+  dataAudit: () => apiGet<DataAuditResponse>('/data/audit', 60000),
   previewOhlc: (file: File) =>
     apiPostForm<OhlcPreviewResponse>('/data/ohlc/preview', fileForm(file), 60000),
   importOhlcToDatabase: (file: File) =>
