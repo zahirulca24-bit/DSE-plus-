@@ -149,6 +149,26 @@ export interface DataSourceResponse {
   fallback_order: Array<'database' | 'local_csv' | 'demo'>;
 }
 
+export interface DataAuditResponse {
+  ok: boolean;
+  data_source: 'database' | 'none';
+  rows_count: number;
+  symbols_count: number;
+  earliest_trade_date: string | null;
+  latest_trade_date: string | null;
+  duplicate_symbol_date_rows: number;
+  zero_volume_rows: number;
+  non_positive_price_rows: number;
+  invalid_ohlc_rows: number;
+  symbols_with_fewer_than_60_rows: number;
+  latest_date_symbols_count: number;
+  latest_date_coverage_percent: number;
+  stale_symbols_count: number;
+  scanner_ready: boolean;
+  warnings: string[];
+  audited_at: string;
+}
+
 export type CollectorStatus = 'queued' | 'running' | 'completed' | 'failed';
 
 export interface CollectorRunRequest {
