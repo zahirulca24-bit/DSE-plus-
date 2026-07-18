@@ -130,6 +130,17 @@ export interface BlobImportResponse {
   message: string;
 }
 
+// Temporary compatibility names keep the existing Data Import component stable
+// while all requests are redirected to Vercel Blob endpoints.
+export interface DriveStatusResponse extends BlobStatusResponse {
+  folder_name?: string | null;
+  master_filename?: string;
+}
+
+export interface DriveImportResponse extends BlobImportResponse {
+  master_filename?: string;
+}
+
 export interface DatabaseStatusResponse {
   configured: boolean;
   connected: boolean;
