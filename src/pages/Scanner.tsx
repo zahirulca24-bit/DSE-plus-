@@ -6,7 +6,7 @@ import {
   ScannerSummaryCard,
   ScannerResultsTable,
   ScannerDetailDrawer,
-  ScannerEmptyState
+  ScannerEmptyState,
 } from '../components/ScannerAndSignalsComponents';
 import { RefreshCw, RotateCcw, Activity, Layers, Globe, Clock } from 'lucide-react';
 
@@ -23,25 +23,26 @@ export default function Scanner() {
     candidateDataSource,
     backendConnectionStatus,
     scannerUniverseCount,
-    scannerEligibleCount
+    scannerEligibleCount,
   } = useMarket();
 
   const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
-  const isApiData = candidateDataSource !== 'demo';
-  const sourceLabel = candidateDataSource === 'database' ? 'DATABASE DATA' : candidateDataSource === 'local_csv' ? 'LOCAL CSV DATA' : 'DEMO DATA';
+  const hasRealData = candidateDataSource !== 'none';
+  const sourceLabel = candidateDataSource === 'database'
+    ? 'DATABASE DATA'
+    : candidateDataSource === 'local_csv'
+      ? 'GOOGLE DRIVE-BACKED DATA'
+      : 'NO LIVE DATA';
 
   const sectors = Array.from(new Set(candidates.map((c) => c.sector))).filter(Boolean);
   const setups = Array.from(new Set(candidates.map((c) => c.setup))).filter(Boolean);
 
   const filteredCandidates = candidates.filter((item) => {
     if (
-      scannerFilters.search &&
-      !item.symbol.toLowerCase().includes(scannerFilters.search.toLowerCase()) &&
-      !item.company.toLowerCase().includes(scannerFilters.search.toLowerCase())
-    ) {
-      return false;
-    }
-
+      scannerFilters.search
+      && !item.symbol.toLowerCase().includes(scannerFilters.search.toLowerCase())
+      && !item.company.toLowerCase().includes(scannerFilters.search.toLowerCase())
+    ) return false;
     if (scannerFilters.sector && item.sector !== scannerFilters.sector) return false;
     if (scannerFilters.setup && item.setup !== scannerFilters.setup) return false;
     if (scannerFilters.side && item.side !== scannerFilters.side) return false;
@@ -54,8 +55,6 @@ export default function Scanner() {
     return true;
   });
 
-  const universeCount = isApiData ? scannerUniverseCount : 395;
-  const eligibleCount = isApiData ? scannerEligibleCount : filteredCandidates.length;
   const aPlusCount = filteredCandidates.filter((c) => c.grade === 'A+').length;
   const aCount = filteredCandidates.filter((c) => c.grade === 'A').length;
   const bPlusCount = filteredCandidates.filter((c) => c.grade === 'B+').length;
@@ -63,81 +62,61 @@ export default function Scanner() {
 
   return (
     <PageContainer id="scanner-route-stage">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-border-dark pb-6">
+      <div className="mb-6 flex flex-col justify-between gap-4 border-b border-border-dark pb-6 md:flex-row md:items-center">
         <div>
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <h1 className="text-2xl font-bold text-white uppercase tracking-tight">Market Scanner</h1>
-            <span className="px-2 py-0.5 rounded bg-[#161B22] border border-border-dark text-[10px] font-mono font-bold text-text-secondary flex items-center gap-1">
-              <Activity className={`w-3 h-3 ${backendConnectionStatus === 'Connected' ? 'text-[#238636]' : 'text-[#D29922]'}`} />
-              <span>STATUS: {backendConnectionStatus === 'Connected' ? 'API CONNECTED' : 'DEMO FALLBACK'}</span>
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold uppercase tracking-tight text-white">Market Scanner</h1>
+            <span className="flex items-center gap-1 rounded border border-border-dark bg-[#161B22] px-2 py-0.5 font-mono text-[10px] font-bold text-text-secondary">
+              <Activity className={`h-3 w-3 ${backendConnectionStatus === 'Connected' ? 'text-[#238636]' : 'text-[#D29922]'}`} />
+              <span>STATUS: {backendConnectionStatus === 'Connected' ? 'API CONNECTED' : 'API NOT READY'}</span>
             </span>
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold border uppercase tracking-wider ${isApiData ? 'bg-[#238636]/10 text-[#238636] border-[#238636]/20' : 'bg-[#D29922]/10 text-[#D29922] border-[#D29922]/20'}`}>
+            <span className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider ${hasRealData ? 'border-[#238636]/20 bg-[#238636]/10 text-[#238636]' : 'border-[#D29922]/20 bg-[#D29922]/10 text-[#D29922]'}`}>
               {sourceLabel}
             </span>
           </div>
-          <p className="text-xs text-text-secondary max-w-2xl font-sans leading-relaxed">
-            Filter and rank DSE stocks using backend scanner output when connected. Demo fallback remains available if the API is unavailable.
+          <p className="max-w-2xl text-xs leading-relaxed text-text-secondary">
+            Scanner results are shown only from the connected backend using verified DSE data. No demo fallback is enabled.
           </p>
         </div>
 
         <div className="flex items-center gap-3 select-none">
-          <button
-            onClick={resetScannerFilters}
-            className="px-3 py-1.5 rounded bg-[#161B22] hover:bg-[#21262D] border border-border-dark text-xs font-mono font-semibold text-white transition-colors flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent"
-            title="Reset Filters back to default matrix"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-text-secondary" />
+          <button onClick={resetScannerFilters} className="flex cursor-pointer items-center gap-1.5 rounded border border-border-dark bg-[#161B22] px-3 py-1.5 font-mono text-xs font-semibold text-white transition-colors hover:bg-[#21262D]">
+            <RotateCcw className="h-3.5 w-3.5 text-text-secondary" />
             <span>RESET FILTERS</span>
           </button>
-
           <button
             onClick={runDemoScan}
-            disabled={isScanning}
-            className="px-3.5 py-1.5 rounded bg-[#238636] hover:bg-[#2EA043] border border-[#238636] disabled:bg-border-dark disabled:border-border-dark disabled:text-text-secondary disabled:cursor-not-allowed text-xs font-mono font-bold text-white transition-colors flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent"
+            disabled={isScanning || backendConnectionStatus !== 'Connected'}
+            className="flex cursor-pointer items-center gap-1.5 rounded border border-[#238636] bg-[#238636] px-3.5 py-1.5 font-mono text-xs font-bold text-white transition-colors hover:bg-[#2EA043] disabled:cursor-not-allowed disabled:border-border-dark disabled:bg-border-dark disabled:text-text-secondary"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
-            <span>{isScanning ? 'SCANNING...' : backendConnectionStatus === 'Connected' ? 'RUN BACKEND SCAN' : 'RUN DEMO SCAN'}</span>
+            <RefreshCw className={`h-3.5 w-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+            <span>{isScanning ? 'SCANNING...' : 'RUN BACKEND SCAN'}</span>
           </button>
         </div>
       </div>
 
-      <div className="mb-6 p-3 rounded-lg border border-border-dark bg-[#161B22]/40 text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-[#58A6FF]" />
-          <span className="text-text-secondary">SCAN ENGINE TELEMETRY:</span>
-          <span className="text-white font-bold">{sourceLabel}</span>
-        </div>
-        <div className="text-text-secondary">
-          Last Scan: <span className="text-white font-semibold font-mono">{scanTimestamp}</span>
-        </div>
+      <div className="mb-6 flex flex-col justify-between gap-2 rounded-lg border border-border-dark bg-[#161B22]/40 p-3 font-mono text-xs sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#58A6FF]" /><span className="text-text-secondary">SCAN ENGINE TELEMETRY:</span><span className="font-bold text-white">{sourceLabel}</span></div>
+        <div className="text-text-secondary">Last Scan: <span className="font-mono font-semibold text-white">{scanTimestamp}</span></div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <ScannerSummaryCard label="Universe" value={universeCount} icon={<Globe className="w-3.5 h-3.5 text-[#58A6FF]" />} context={isApiData ? 'Backend scanned symbols' : 'Total Tracked DSE'} />
-        <ScannerSummaryCard label="Eligible Stocks" value={eligibleCount} icon={<Layers className="w-3.5 h-3.5 text-[#58A6FF]" />} context={isApiData ? 'Backend eligible symbols' : 'Matches Active Filters'} />
-        <ScannerSummaryCard label="A+ Grade" value={aPlusCount} icon={<span className="text-[10px] font-mono text-[#238636] font-extrabold">A+</span>} context="A+ Highly Qualified" />
-        <ScannerSummaryCard label="A Grade" value={aCount} icon={<span className="text-[10px] font-mono text-[#58A6FF] font-extrabold">A</span>} context="A Qualified" />
-        <ScannerSummaryCard label="B+ Watch" value={bPlusCount} icon={<span className="text-[10px] font-mono text-[#D29922] font-extrabold">B+</span>} context="B+ Watch Setups" />
-        <ScannerSummaryCard label="Rejected" value={rejectCount} icon={<span className="text-[10px] font-mono text-[#DA3633] font-extrabold">X</span>} context="Under 85 Score" />
+      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <ScannerSummaryCard label="Universe" value={scannerUniverseCount} icon={<Globe className="h-3.5 w-3.5 text-[#58A6FF]" />} context="Backend scanned symbols" />
+        <ScannerSummaryCard label="Eligible Stocks" value={scannerEligibleCount} icon={<Layers className="h-3.5 w-3.5 text-[#58A6FF]" />} context="Backend eligible symbols" />
+        <ScannerSummaryCard label="A+ Grade" value={aPlusCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#238636]">A+</span>} context="A+ Highly Qualified" />
+        <ScannerSummaryCard label="A Grade" value={aCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#58A6FF]">A</span>} context="A Qualified" />
+        <ScannerSummaryCard label="B+ Watch" value={bPlusCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#D29922]">B+</span>} context="B+ Watch Setups" />
+        <ScannerSummaryCard label="Rejected" value={rejectCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#DA3633]">X</span>} context="Under 85 Score" />
       </div>
 
-      <div className="mb-6">
-        <ScannerFilterPanel isCollapsed={isFilterCollapsed} setIsCollapsed={setIsFilterCollapsed} sectors={sectors} setups={setups} />
-      </div>
+      <div className="mb-6"><ScannerFilterPanel isCollapsed={isFilterCollapsed} setIsCollapsed={setIsFilterCollapsed} sectors={sectors} setups={setups} /></div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-border-dark/60 pb-2">
-          <h2 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">Scanned Candidates Match Array</h2>
-          <span className="text-xs text-text-secondary font-mono">
-            Filtered Total: <span className="text-white font-bold">{filteredCandidates.length}</span>
-          </span>
+          <h2 className="font-mono text-sm font-semibold uppercase tracking-wider text-white">Scanned Candidates</h2>
+          <span className="font-mono text-xs text-text-secondary">Filtered Total: <span className="font-bold text-white">{filteredCandidates.length}</span></span>
         </div>
-
-        {filteredCandidates.length === 0 ? (
-          <ScannerEmptyState onClear={resetScannerFilters} />
-        ) : (
-          <ScannerResultsTable items={filteredCandidates} onViewDetails={(id) => setSelectedScannerCandidateId(id)} />
-        )}
+        {filteredCandidates.length === 0 ? <ScannerEmptyState onClear={resetScannerFilters} /> : <ScannerResultsTable items={filteredCandidates} onViewDetails={(id) => setSelectedScannerCandidateId(id)} />}
       </div>
 
       <ScannerDetailDrawer id={selectedScannerCandidateId} onClose={() => setSelectedScannerCandidateId(null)} />
