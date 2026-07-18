@@ -108,18 +108,17 @@ export interface OhlcPreviewResponse {
   errors: string[];
 }
 
-export interface DriveStatusResponse {
+export interface BlobStatusResponse {
   configured: boolean;
   connected: boolean;
-  storage_type: 'google_drive';
-  folder_name: string | null;
-  master_filename: string;
+  storage_type: 'vercel_blob';
+  master_pathname: string;
   message: string;
 }
 
-export interface DriveImportResponse {
+export interface BlobImportResponse {
   ok: boolean;
-  data_source: 'google_drive';
+  data_source: 'vercel_blob';
   inserted_rows: number;
   updated_rows: number;
   invalid_rows: number;
@@ -127,7 +126,7 @@ export interface DriveImportResponse {
   rows_count: number;
   earliest_trade_date: string | null;
   latest_trade_date: string | null;
-  master_filename: string;
+  master_pathname: string;
   message: string;
 }
 
