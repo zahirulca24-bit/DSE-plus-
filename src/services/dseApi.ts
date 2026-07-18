@@ -1,6 +1,8 @@
 import { apiGet, apiPost, apiPostForm, apiPostJson } from './apiClient';
 import {
   ApiHealthResponse,
+  BlobImportResponse,
+  BlobStatusResponse,
   CollectorHistoryResponse,
   CollectorRunRequest,
   CollectorRunResponse,
@@ -10,8 +12,6 @@ import {
   DataAuditResponse,
   DataSourceResponse,
   DataStatusResponse,
-  DriveImportResponse,
-  DriveStatusResponse,
   DseScannerLatestResponse,
   DseSignalsResponse,
   DseStatusResponse,
@@ -31,12 +31,12 @@ export const dseApi = {
   scannerStatus: () => apiGet<Record<string, unknown>>('/scanner/status'),
   scannerLatest: () => apiGet<DseScannerLatestResponse>('/scanner/latest'),
   scannerRun: () => apiPost<DseScannerLatestResponse>('/scanner/run', 60000),
-  driveStatus: () => apiGet<DriveStatusResponse>('/drive/status'),
+  storageStatus: () => apiGet<BlobStatusResponse>('/storage/status'),
   dataStatus: () => apiGet<DataStatusResponse>('/data/status'),
   previewOhlc: (file: File) =>
     apiPostForm<OhlcPreviewResponse>('/data/ohlc/preview', fileForm(file), 60000),
-  importOhlcToDrive: (file: File) =>
-    apiPostForm<DriveImportResponse>('/data/ohlc/import-drive', fileForm(file), 300000),
+  importOhlcToBlob: (file: File) =>
+    apiPostForm<BlobImportResponse>('/data/ohlc/import-blob', fileForm(file), 300000),
   databaseStatus: () => apiGet<DatabaseStatusResponse>('/db/status'),
   initializeDatabase: () => apiPost<DatabaseInitResponse>('/db/init', 30000),
   dataSource: () => apiGet<DataSourceResponse>('/data/source'),
