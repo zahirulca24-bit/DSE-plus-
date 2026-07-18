@@ -10,6 +10,8 @@ import {
   DataAuditResponse,
   DataSourceResponse,
   DataStatusResponse,
+  DriveImportResponse,
+  DriveStatusResponse,
   DseScannerLatestResponse,
   DseSignalsResponse,
   DseStatusResponse,
@@ -29,13 +31,16 @@ export const dseApi = {
   scannerStatus: () => apiGet<Record<string, unknown>>('/scanner/status'),
   scannerLatest: () => apiGet<DseScannerLatestResponse>('/scanner/latest'),
   scannerRun: () => apiPost<DseScannerLatestResponse>('/scanner/run', 60000),
-  databaseStatus: () => apiGet<DatabaseStatusResponse>('/db/status'),
-  initializeDatabase: () => apiPost<DatabaseInitResponse>('/db/init', 30000),
+  driveStatus: () => apiGet<DriveStatusResponse>('/drive/status'),
   dataStatus: () => apiGet<DataStatusResponse>('/data/status'),
-  dataSource: () => apiGet<DataSourceResponse>('/data/source'),
-  dataAudit: () => apiGet<DataAuditResponse>('/data/audit', 60000),
   previewOhlc: (file: File) =>
     apiPostForm<OhlcPreviewResponse>('/data/ohlc/preview', fileForm(file), 60000),
+  importOhlcToDrive: (file: File) =>
+    apiPostForm<DriveImportResponse>('/data/ohlc/import-drive', fileForm(file), 300000),
+  databaseStatus: () => apiGet<DatabaseStatusResponse>('/db/status'),
+  initializeDatabase: () => apiPost<DatabaseInitResponse>('/db/init', 30000),
+  dataSource: () => apiGet<DataSourceResponse>('/data/source'),
+  dataAudit: () => apiGet<DataAuditResponse>('/data/audit', 60000),
   importOhlcToDatabase: (file: File) =>
     apiPostForm<DatabaseImportResponse>('/data/ohlc/import-db', fileForm(file), 300000),
   collectorRun: (request: CollectorRunRequest, token: string) =>
