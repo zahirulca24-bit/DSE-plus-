@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
-  Database,
+  Cloud,
   FileText,
   Loader2,
   RefreshCw,
@@ -14,10 +14,9 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { dseApi } from '../services/dseApi';
 import {
-  DatabaseImportResponse,
-  DatabaseStatusResponse,
-  DataAuditResponse,
-  DataSourceResponse,
+  DataStatusResponse,
+  DriveImportResponse,
+  DriveStatusResponse,
   OhlcPreviewResponse,
 } from '../types/api';
 
@@ -91,11 +90,10 @@ export default function DataImport() {
   const [totalRows, setTotalRows] = useState(0);
   const [lastPreview, setLastPreview] = useState('Not loaded');
   const [backendConnected, setBackendConnected] = useState(false);
-  const [databaseStatus, setDatabaseStatus] = useState<DatabaseStatusResponse | null>(null);
-  const [dataSource, setDataSource] = useState<DataSourceResponse | null>(null);
-  const [dataAudit, setDataAudit] = useState<DataAuditResponse | null>(null);
+  const [driveStatus, setDriveStatus] = useState<DriveStatusResponse | null>(null);
+  const [dataStatus, setDataStatus] = useState<DataStatusResponse | null>(null);
   const [backendPreview, setBackendPreview] = useState<OhlcPreviewResponse | null>(null);
-  const [importResult, setImportResult] = useState<DatabaseImportResponse | null>(null);
+  const [importResult, setImportResult] = useState<DriveImportResponse | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -122,18 +120,16 @@ export default function DataImport() {
 
   const refreshStatus = useCallback(async () => {
     setStatusLoading(true);
-    const [healthResult, databaseResult, sourceResult, auditResult] = await Promise.all([
+    const [healthResult, driveResult, dataResult] = await Promise.all([
       dseApi.health(),
-      dseApi.databaseStatus(),
-      dseApi.dataSource(),
-      dseApi.dataAudit(),
+      dseApi.driveStatus(),
+      dseApi.dataStatus(),
     ]);
 
     setBackendConnected(healthResult.ok);
     setBackendError(healthResult.ok ? null : healthResult.error || 'Backend is unavailable.');
-    setDatabaseStatus(databaseResult.ok ? databaseResult.data : null);
-    setDataSource(sourceResult.ok ? sourceResult.data : null);
-    setDataAudit(auditResult.ok && auditResult.data?.ok ? auditResult.data : null);
+    setDriveStatus(driveResult.ok ? driveResult.data : null);
+    setDataStatus(dataResult.ok ? dataResult.data : null);
     setStatusLoading(false);
   }, []);
 
@@ -176,7 +172,7 @@ export default function DataImport() {
     setLastPreview(new Date().toLocaleString('en-GB'));
 
     if (!isOhlcImport) {
-      setNotice({ type: 'info', message: 'Local preview complete. Automatic database saving is currently enabled only for DSE OHLC Data.' });
+      setNotice({ type: 'info', message: 'Local preview complete. Automatic Google Drive saving is currently enabled only for DSE OHLC Data.' });
       return;
     }
 
@@ -200,74 +196,69 @@ export default function DataImport() {
     }
   };
 
-  const saveToSupabase = async () => {
+  const saveToDrive = async () => {
     if (!selectedFile || !backendPreview?.ok) {
       setNotice({ type: 'error', message: 'Select and validate a DSE OHLC CSV first.' });
       return;
     }
-    if (!databaseStatus?.configured) {
-      setNotice({ type: 'error', message: 'Supabase/Postgres is not configured on the backend. DATABASE_URL must be added first.' });
+    if (!driveStatus?.configured) {
+      setNotice({ type: 'error', message: 'Google Drive storage is not configured on the backend yet.' });
       return;
     }
-    if (!databaseStatus.connected) {
-      setNotice({ type: 'error', message: databaseStatus.message || 'Supabase/Postgres is not connected.' });
+    if (!driveStatus.connected) {
+      setNotice({ type: 'error', message: driveStatus.message || 'Google Drive storage is unavailable.' });
       return;
     }
 
     setSaving(true);
     setImportResult(null);
-    setNotice({ type: 'info', message: 'Initializing database tables and saving validated OHLC rows…' });
+    setNotice({ type: 'info', message: 'Merging validated OHLC rows and saving the master dataset to Google Drive…' });
 
-    const initResult = await dseApi.initializeDatabase();
-    if (!initResult.ok || !initResult.data?.ok) {
-      setSaving(false);
-      setNotice({ type: 'error', message: initResult.data?.message || initResult.error || 'Database initialization failed.' });
-      return;
-    }
-
-    const result = await dseApi.importOhlcToDatabase(selectedFile);
+    const result = await dseApi.importOhlcToDrive(selectedFile);
     if (!result.ok || !result.data?.ok) {
       setSaving(false);
-      setNotice({ type: 'error', message: result.data?.message || result.error || 'Database import failed.' });
+      setNotice({ type: 'error', message: result.data?.message || result.error || 'Google Drive save failed.' });
       return;
     }
 
     setImportResult(result.data);
     setNotice({
       type: 'success',
-      message: `Saved successfully: ${formatCount(result.data.inserted_rows)} inserted, ${formatCount(result.data.updated_rows)} updated, ${formatCount(result.data.invalid_rows)} invalid.`,
+      message: `Saved to Google Drive: ${formatCount(result.data.inserted_rows)} inserted, ${formatCount(result.data.updated_rows)} updated, ${formatCount(result.data.invalid_rows)} invalid.`,
     });
     await refreshStatus();
     setSaving(false);
   };
 
-  const databaseReady = Boolean(databaseStatus?.configured && databaseStatus.connected);
+  const driveReady = Boolean(driveStatus?.configured && driveStatus.connected);
   const fileReady = Boolean(selectedFile && isOhlcImport && backendPreview?.ok && missingColumns.length === 0);
-  const canSave = fileReady && databaseReady && !saving && !previewLoading;
+  const canSave = fileReady && driveReady && !saving && !previewLoading;
 
   const pageBadge = importResult?.ok
     ? <StatusBadge status="positive" label="IMPORT COMPLETE" />
-    : databaseReady && backendConnected
-      ? <StatusBadge status="positive" label="DATABASE READY" />
+    : driveReady && backendConnected
+      ? <StatusBadge status="positive" label="DRIVE STORAGE READY" />
       : backendConnected
-        ? <StatusBadge status="warning" label="DATABASE NOT READY" />
+        ? <StatusBadge status="warning" label="DRIVE NOT READY" />
         : <StatusBadge status="negative" label="BACKEND OFFLINE" />;
 
-  const databaseMessage = !backendConnected
+  const storageMessage = !backendConnected
     ? `Backend connection failed. ${backendError || ''}`.trim()
-    : !databaseStatus?.configured
-      ? 'Backend is connected, but Supabase/Postgres DATABASE_URL is not configured.'
-      : !databaseStatus.connected
-        ? databaseStatus.message
-        : dataSource?.database_available
-          ? 'Backend and database are connected. OHLC upload is ready.'
-          : 'Database is connected. Select a CSV; tables will be initialized automatically before saving.';
+    : !driveStatus?.configured
+      ? 'Backend is connected, but Google Drive storage credentials are not configured yet.'
+      : !driveStatus.connected
+        ? driveStatus.message
+        : `Google Drive is connected to ${driveStatus.folder_name || 'the configured storage folder'}. Uploads will update ${driveStatus.master_filename}.`;
+
+  const verifiedRows = importResult?.rows_count ?? dataStatus?.rows_count;
+  const verifiedSymbols = importResult?.symbols_count ?? dataStatus?.symbols_count;
+  const verifiedLatestDate = importResult?.latest_trade_date ?? dataStatus?.latest_trade_date;
 
   return (
     <PageContainer id="data-import-route">
       <PageHeader
         title="Data Import"
-        description="Validate DSE OHLC files, save them through the backend, and automatically upsert Supabase/Postgres market data."
+        description="Validate DSE OHLC files, save them through the backend, and automatically update the Google Drive master dataset."
         breadcrumbs={[{ label: 'Data Import', path: '/data-import' }]}
         action={pageBadge}
       />
@@ -287,9 +278,9 @@ export default function DataImport() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <StatusCard label="Backend API" value={statusLoading ? 'Checking…' : backendConnected ? 'Connected' : 'Offline'} tone={backendConnected ? 'positive' : 'negative'} />
-          <StatusCard label="Supabase/Postgres" value={statusLoading ? 'Checking…' : databaseReady ? 'Connected' : databaseStatus?.configured ? 'Unavailable' : 'Not Configured'} tone={databaseReady ? 'positive' : 'warning'} />
-          <StatusCard label="Database Rows" value={formatCount(dataAudit?.rows_count)} tone={dataAudit?.ok ? 'positive' : 'neutral'} />
-          <StatusCard label="Latest OHLC Date" value={dataAudit?.latest_trade_date || 'Unknown'} tone={dataAudit?.latest_trade_date ? 'positive' : 'neutral'} />
+          <StatusCard label="Google Drive" value={statusLoading ? 'Checking…' : driveReady ? 'Connected' : driveStatus?.configured ? 'Unavailable' : 'Not Configured'} tone={driveReady ? 'positive' : 'warning'} />
+          <StatusCard label="Master Rows" value={formatCount(verifiedRows)} tone={verifiedRows ? 'positive' : 'neutral'} />
+          <StatusCard label="Latest OHLC Date" value={verifiedLatestDate || 'Unknown'} tone={verifiedLatestDate ? 'positive' : 'neutral'} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -311,8 +302,8 @@ export default function DataImport() {
         <div className="space-y-5 rounded-xl border border-border-dark bg-[#0D1117] p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-sm font-bold text-white">CSV Validation & Database Save</h3>
-              <p className="text-xs text-text-secondary">The browser shows a quick preview; the backend performs authoritative validation before database upsert.</p>
+              <h3 className="text-sm font-bold text-white">CSV Validation & Google Drive Save</h3>
+              <p className="text-xs text-text-secondary">The browser shows a quick preview. The backend validates, merges by symbol + trade_date, saves the master CSV to Drive, and refreshes its local cache.</p>
             </div>
             <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-[#238636] px-4 py-2 text-xs font-mono font-bold text-white">
               <UploadCloud className="h-4 w-4" /> Select CSV
@@ -340,7 +331,7 @@ export default function DataImport() {
               <div>Backend invalid rows: <span className={backendPreview?.invalid_rows ? 'text-[#F85149]' : 'text-white'}>{formatCount(backendPreview?.invalid_rows)}</span></div>
               <div>Symbols detected: <span className="text-white">{formatCount(backendPreview?.symbols_count)}</span></div>
               <div>Latest file date: <span className="text-white">{backendPreview?.latest_trade_date || 'Unknown'}</span></div>
-              <div>Database source: <span className="text-white">{dataSource?.preferred_source || 'Unknown'}</span></div>
+              <div>Storage target: <span className="text-white">{driveStatus?.master_filename || 'Google Drive master CSV'}</span></div>
             </div>
             {backendPreview?.warnings.length ? <div className="mt-3 text-[#D29922]">Warnings: {backendPreview.warnings.join(' ')}</div> : null}
             {backendPreview?.errors.length ? <div className="mt-3 text-[#F85149]">Errors: {backendPreview.errors.join(' ')}</div> : null}
@@ -362,23 +353,23 @@ export default function DataImport() {
 
           <div className="flex flex-col gap-3 rounded-lg border border-border-dark bg-[#161B22]/40 p-4 md:flex-row md:items-center md:justify-between">
             <div className="text-xs text-text-secondary">
-              <div className="font-bold text-white">Save destination: Supabase/Postgres</div>
-              <div className="mt-1">Rows are upserted by <span className="font-mono text-white">symbol + trade_date</span>; re-uploading updates existing rows without duplicates.</div>
+              <div className="font-bold text-white">Save destination: Google Drive</div>
+              <div className="mt-1">Rows are upserted by <span className="font-mono text-white">symbol + trade_date</span>. Existing dates update; new dates append without duplicate keys.</div>
             </div>
             <button
               type="button"
-              onClick={() => void saveToSupabase()}
+              onClick={() => void saveToDrive()}
               disabled={!canSave}
-              className="inline-flex min-w-[190px] items-center justify-center gap-2 rounded-md bg-[#238636] px-5 py-3 text-xs font-mono font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-[#21262D] disabled:text-text-secondary"
+              className="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-md bg-[#238636] px-5 py-3 text-xs font-mono font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-[#21262D] disabled:text-text-secondary"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? 'Saving…' : 'Save to Supabase'}
+              {saving ? 'Saving…' : 'Save to Google Drive'}
             </button>
           </div>
 
           {!isOhlcImport && (
             <div className="rounded-lg border border-[#58A6FF]/30 bg-[#58A6FF]/5 p-4 text-xs text-[#58A6FF]">
-              Automatic database saving is currently enabled for DSE OHLC Data. Other import categories remain preview-only until their backend schemas are added.
+              Automatic Drive saving is currently enabled for DSE OHLC Data. Other import categories remain preview-only until their storage schemas are added.
             </div>
           )}
 
@@ -386,27 +377,26 @@ export default function DataImport() {
 
           {importResult?.ok && (
             <div className="rounded-xl border border-[#238636]/40 bg-[#238636]/10 p-5">
-              <div className="flex items-center gap-2 text-sm font-bold text-[#3FB950]"><CheckCircle2 className="h-5 w-5" />Database Import Verified</div>
-              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#3FB950]"><CheckCircle2 className="h-5 w-5" />Google Drive Import Verified</div>
+              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-6">
                 <ResultMetric label="Inserted" value={formatCount(importResult.inserted_rows)} />
                 <ResultMetric label="Updated" value={formatCount(importResult.updated_rows)} />
                 <ResultMetric label="Invalid" value={formatCount(importResult.invalid_rows)} />
-                <ResultMetric label="File Symbols" value={formatCount(importResult.symbols_count)} />
+                <ResultMetric label="Total Rows" value={formatCount(importResult.rows_count)} />
+                <ResultMetric label="Symbols" value={formatCount(importResult.symbols_count)} />
                 <ResultMetric label="Latest Date" value={importResult.latest_trade_date || 'Unknown'} />
               </div>
-              {dataAudit?.ok && (
-                <div className="mt-4 border-t border-[#238636]/20 pt-4 text-xs text-text-secondary">
-                  Verified database total: <span className="font-bold text-white">{formatCount(dataAudit.rows_count)} rows</span> · <span className="font-bold text-white">{formatCount(dataAudit.symbols_count)} symbols</span> · latest OHLC <span className="font-bold text-white">{dataAudit.latest_trade_date || 'Unknown'}</span>.
-                </div>
-              )}
+              <div className="mt-4 border-t border-[#238636]/20 pt-4 text-xs text-text-secondary">
+                Canonical file: <span className="font-bold text-white">{importResult.master_filename}</span>. Scanner and backtest use the refreshed local cache backed by this Drive master.
+              </div>
             </div>
           )}
         </div>
 
-        <div className={`rounded-xl border p-4 text-xs ${databaseReady ? 'border-[#238636]/30 bg-[#238636]/5 text-[#3FB950]' : 'border-[#D29922]/30 bg-[#D29922]/5 text-[#D29922]'}`}>
+        <div className={`rounded-xl border p-4 text-xs ${driveReady ? 'border-[#238636]/30 bg-[#238636]/5 text-[#3FB950]' : 'border-[#D29922]/30 bg-[#D29922]/5 text-[#D29922]'}`}>
           <div className="flex items-start gap-2">
-            {databaseReady ? <Database className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
-            <span>{databaseMessage}</span>
+            {driveReady ? <Cloud className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+            <span>{storageMessage}</span>
           </div>
         </div>
       </div>
