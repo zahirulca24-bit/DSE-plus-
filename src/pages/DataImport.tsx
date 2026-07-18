@@ -387,7 +387,7 @@ export default function DataImport() {
                 <ResultMetric label="Latest Date" value={importResult.latest_trade_date || 'Unknown'} />
               </div>
               <div className="mt-4 border-t border-[#238636]/20 pt-4 text-xs text-text-secondary">
-                Canonical file: <span className="font-bold text-white">{importResult.master_filename}</span>. Scanner and backtest use the refreshed local cache backed by this Drive master.
+                Canonical file: <span className="font-bold text-white">{importResult.master_filename}</span>. Google Drive master and the backend local cache were refreshed successfully.
               </div>
             </div>
           )}
