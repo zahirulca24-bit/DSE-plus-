@@ -108,6 +108,29 @@ export interface OhlcPreviewResponse {
   errors: string[];
 }
 
+export interface DriveStatusResponse {
+  configured: boolean;
+  connected: boolean;
+  storage_type: 'google_drive';
+  folder_name: string | null;
+  master_filename: string;
+  message: string;
+}
+
+export interface DriveImportResponse {
+  ok: boolean;
+  data_source: 'google_drive';
+  inserted_rows: number;
+  updated_rows: number;
+  invalid_rows: number;
+  symbols_count: number;
+  rows_count: number;
+  earliest_trade_date: string | null;
+  latest_trade_date: string | null;
+  master_filename: string;
+  message: string;
+}
+
 export interface DatabaseStatusResponse {
   configured: boolean;
   connected: boolean;
