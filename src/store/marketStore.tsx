@@ -1,14 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { Candidate } from '../types/scanner';
-import { candidatesMockData } from '../data/scannerMockData';
 import { PortfolioHolding, PortfolioSummary } from '../types/portfolio';
-import { portfolioHoldingsMockData, portfolioSummaryMockData } from '../data/portfolioMockData';
 import { JournalEntry } from '../types/journal';
-import { journalEntriesMockData } from '../data/journalMockData';
 import { WatchlistItemAlert } from '../types/watchlist';
 import { RegimeState } from '../types/marketRegime';
 import { BacktestConfig, BacktestResult } from '../types/backtest';
-import { backtestResultsMock } from '../data/backtestMockData';
 import { dseApi } from '../services/dseApi';
 import { DseBackendCandidate, DseScannerLatestResponse, DseSignalsResponse } from '../types/api';
 
@@ -52,11 +48,13 @@ const emptyPortfolioSummary: PortfolioSummary = {
   healthScore: 0,
 };
 
+type CandidateDataSource = 'none' | 'database' | 'local_csv';
+
 interface MarketContextType {
   candidates: Candidate[];
   backendConnectionStatus: 'Not Configured' | 'Checking' | 'Connected' | 'Error';
   backendMessage: string;
-  candidateDataSource: 'demo' | 'database' | 'local_csv';
+  candidateDataSource: CandidateDataSource;
   scannerUniverseCount: number;
   scannerEligibleCount: number;
   refreshBackendData: () => Promise<void>;
@@ -126,6 +124,18 @@ interface MarketContextType {
 
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
 
+function timestamp(): string {
+  return new Date().toLocaleString('en-GB', {
+    timeZone: 'Asia/Dhaka',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
 function formatDateTime(value?: string | null): string {
   if (!value) return timestamp();
   const date = new Date(value);
@@ -140,18 +150,22 @@ function formatDateTime(value?: string | null): string {
   });
 }
 
-function timestamp() {
-  const d = new Date();
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `17 Jul 2026 ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
 function mapEntryStatus(status?: string): Candidate['entryStatus'] {
   if (status === 'READY' || status === 'NEAR' || status === 'WATCH') return status;
   return 'WATCH';
 }
 
-function mapBackendCandidate(item: DseBackendCandidate, index: number, source: 'demo' | 'database' | 'local_csv'): Candidate {
+function sourceFromBackend(value?: string): CandidateDataSource {
+  if (value === 'database') return 'database';
+  if (value === 'local_csv' || value === 'google_drive') return 'local_csv';
+  return 'none';
+}
+
+function mapBackendCandidate(
+  item: DseBackendCandidate,
+  index: number,
+  source: Exclude<CandidateDataSource, 'none'>,
+): Candidate {
   const price = Number(item.latest_close ?? 0);
   const trend = item.trend || 'NEUTRAL';
   const riskReward = Number(item.risk_reward ?? 0);
@@ -191,58 +205,48 @@ function mapBackendCandidate(item: DseBackendCandidate, index: number, source: '
     missingConditions: item.warnings || [],
     rejectionReasons: item.signal_status === 'rejected' ? item.warnings || ['Rejected by backend scanner rule.'] : [],
     updatedAt: item.trade_date || timestamp(),
-    dataMode: item.data_mode || (source === 'database' ? 'Database' : source === 'local_csv' ? 'Local CSV' : 'Demo Data'),
+    dataMode: source === 'database' ? 'Database' : 'Google Drive-backed cache',
   };
 }
 
-function sourceFromBackend(value?: string): 'demo' | 'database' | 'local_csv' {
-  if (value === 'database') return 'database';
-  if (value === 'local_csv') return 'local_csv';
-  return 'demo';
-}
-
 export function MarketProvider({ children }: { children: ReactNode }) {
-  const [candidates, setCandidates] = useState<Candidate[]>(candidatesMockData);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [backendConnectionStatus, setBackendConnectionStatus] = useState<MarketContextType['backendConnectionStatus']>('Checking');
   const [backendMessage, setBackendMessage] = useState<string>('Checking backend health...');
-  const [candidateDataSource, setCandidateDataSource] = useState<'demo' | 'database' | 'local_csv'>('demo');
-  const [scannerUniverseCount, setScannerUniverseCount] = useState<number>(395);
-  const [scannerEligibleCount, setScannerEligibleCount] = useState<number>(candidatesMockData.length);
+  const [candidateDataSource, setCandidateDataSource] = useState<CandidateDataSource>('none');
+  const [scannerUniverseCount, setScannerUniverseCount] = useState<number>(0);
+  const [scannerEligibleCount, setScannerEligibleCount] = useState<number>(0);
 
-  const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>(['GP', 'BATBC', 'SQURPHARMA']);
-  const [watchlistAlerts, setWatchlistAlerts] = useState<Record<string, WatchlistItemAlert[]>>({
-    GP: [{ enabled: true, type: 'PRICE_ABOVE', value: 290.0, createdAt: '16 Jul 2026' }],
-    SQURPHARMA: [{ enabled: true, type: 'ENTRY_READY', value: 0, createdAt: '16 Jul 2026' }],
-  });
+  const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
+  const [watchlistAlerts, setWatchlistAlerts] = useState<Record<string, WatchlistItemAlert[]>>({});
 
   const [selectedScannerCandidateId, setSelectedScannerCandidateId] = useState<string | null>(null);
   const [selectedSignalCandidateId, setSelectedSignalCandidateId] = useState<string | null>(null);
   const [scannerFilters, setScannerFilters] = useState<ScannerFilters>(initialFilters);
   const [activeSignalsTab, setActiveSignalsTab] = useState<'qualified' | 'near' | 'rejected' | 'all'>('qualified');
   const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [scanTimestamp, setScanTimestamp] = useState<string>('16 Jul 2026 14:00');
+  const [scanTimestamp, setScanTimestamp] = useState<string>('Not run');
 
   const [isPortfolioConnected, setIsPortfolioConnected] = useState<boolean>(false);
   const [portfolioHoldings, setPortfolioHoldings] = useState<PortfolioHolding[]>([]);
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary>(emptyPortfolioSummary);
-
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
 
   const [regimePeriod, setRegimePeriod] = useState<'1M' | '3M' | '6M' | '1Y'>('3M');
   const [activeRegimeState, setActiveRegimeState] = useState<RegimeState>('Neutral');
   const [isRefreshingRegime, setIsRefreshingRegime] = useState<boolean>(false);
-  const [regimeTimestamp, setRegimeTimestamp] = useState<string>('16 Jul 2026 21:50');
+  const [regimeTimestamp, setRegimeTimestamp] = useState<string>('Not connected');
 
   const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
   const [isRefreshingSectors, setIsRefreshingSectors] = useState<boolean>(false);
-  const [sectorTimestamp, setSectorTimestamp] = useState<string>('16 Jul 2026 21:50');
+  const [sectorTimestamp, setSectorTimestamp] = useState<string>('Not connected');
 
   const [backtestConfig, setBacktestConfig] = useState<BacktestConfig>({
     strategy: 'SMA 20/50 Crossover',
     symbol: 'ALL',
     sector: 'ALL',
     allSymbols: true,
-    startDate: '2025-01-01',
+    startDate: '2025-07-02',
     endDate: '2026-07-16',
     initialCapital: 1000000,
     riskPerTradePercent: 1.0,
@@ -259,38 +263,50 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     longOnly: true,
     excludeLowLiquidity: true,
   });
-  const [isBacktestLoaded, setIsBacktestLoaded] = useState<boolean>(false);
+  const [isBacktestLoaded] = useState<boolean>(false);
   const [isBacktesting, setIsBacktesting] = useState<boolean>(false);
   const [selectedBacktestTradeId, setSelectedBacktestTradeId] = useState<string | null>(null);
+  const backtestResult: BacktestResult | null = null;
 
-  const backtestResult = isBacktestLoaded
-    ? backtestResultsMock[backtestConfig.strategy] || backtestResultsMock['SMA 20/50 Crossover']
-    : null;
+  const clearScannerData = useCallback((message: string) => {
+    setCandidates([]);
+    setCandidateDataSource('none');
+    setScannerUniverseCount(0);
+    setScannerEligibleCount(0);
+    setBackendMessage(message);
+  }, []);
 
   const applyScannerResult = useCallback((payload: DseScannerLatestResponse) => {
     const source = sourceFromBackend(payload.data_source);
+    if (source === 'none') {
+      clearScannerData('Backend returned demo/unsupported scanner data. No fake data is displayed.');
+      return;
+    }
     setCandidates(payload.candidates.map((item, index) => mapBackendCandidate(item, index, source)));
     setCandidateDataSource(source);
     setScannerUniverseCount(payload.scanned_symbols || payload.candidates.length);
     setScannerEligibleCount(payload.eligible_symbols || payload.candidates.length);
     setScanTimestamp(formatDateTime(payload.generated_at));
-  }, []);
+  }, [clearScannerData]);
 
   const applySignalsResult = useCallback((payload: DseSignalsResponse) => {
     const source = sourceFromBackend(payload.data_source);
+    if (source === 'none') {
+      clearScannerData('Backend returned demo/unsupported signal data. No fake data is displayed.');
+      return;
+    }
     setCandidates(payload.signals.map((item, index) => mapBackendCandidate(item, index, source)));
     setCandidateDataSource(source);
     setScannerUniverseCount(payload.signals.length);
     setScannerEligibleCount(payload.signals.length);
-  }, []);
+  }, [clearScannerData]);
 
   const refreshBackendData = useCallback(async () => {
     setBackendConnectionStatus('Checking');
     const health = await dseApi.health();
     if (!health.ok) {
       setBackendConnectionStatus(health.error?.includes('not configured') ? 'Not Configured' : 'Error');
-      setBackendMessage(health.error || 'Backend health check failed. Demo data remains active.');
-      setCandidateDataSource('demo');
+      clearScannerData(health.error || 'Backend health check failed. No fake fallback is enabled.');
       return;
     }
 
@@ -298,16 +314,19 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     setBackendMessage(`Health endpoint responded OK: ${health.data?.app || 'DSE Pulse Backend'}`);
 
     const latest = await dseApi.scannerLatest();
-    if (latest.ok && latest.data?.ok && latest.data.candidates.length > 0) {
+    if (latest.ok && latest.data?.ok && latest.data.candidates.length > 0 && sourceFromBackend(latest.data.data_source) !== 'none') {
       applyScannerResult(latest.data);
       return;
     }
 
     const signals = await dseApi.signals();
-    if (signals.ok && signals.data?.signals?.length) {
+    if (signals.ok && signals.data?.signals?.length && sourceFromBackend(signals.data.data_source) !== 'none') {
       applySignalsResult(signals.data);
+      return;
     }
-  }, [applyScannerResult, applySignalsResult]);
+
+    clearScannerData('Backend is connected, but no real scanner dataset is available yet.');
+  }, [applyScannerResult, applySignalsResult, clearScannerData]);
 
   useEffect(() => {
     void refreshBackendData();
@@ -315,59 +334,46 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
   const runRegimeRefresh = async () => {
     setIsRefreshingRegime(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setRegimeTimestamp(timestamp());
+    setRegimeTimestamp('Not connected');
     setIsRefreshingRegime(false);
   };
 
   const runSectorRefresh = async () => {
     setIsRefreshingSectors(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setSectorTimestamp(timestamp());
+    setSectorTimestamp('Not connected');
     setIsRefreshingSectors(false);
   };
 
   const runDemoBacktest = async () => {
     setIsBacktesting(true);
-    setIsBacktestLoaded(false);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    setIsBacktestLoaded(true);
     setIsBacktesting(false);
   };
 
   const addToWatchlist = (symbol: string) => {
-    if (!watchlistSymbols.includes(symbol)) {
-      setWatchlistSymbols((prev) => [...prev, symbol]);
-    }
+    if (!watchlistSymbols.includes(symbol)) setWatchlistSymbols((prev) => [...prev, symbol]);
   };
 
   const removeFromWatchlist = (symbol: string) => {
-    setWatchlistSymbols((prev) => prev.filter((s) => s !== symbol));
+    setWatchlistSymbols((prev) => prev.filter((item) => item !== symbol));
     setWatchlistAlerts((prev) => {
-      const copy = { ...prev };
-      delete copy[symbol];
-      return copy;
+      const next = { ...prev };
+      delete next[symbol];
+      return next;
     });
   };
 
   const addWatchlistAlert = (symbol: string, alert: Omit<WatchlistItemAlert, 'createdAt'>) => {
-    setWatchlistAlerts((prev) => {
-      const list = prev[symbol] || [];
-      return {
-        ...prev,
-        [symbol]: [...list, { ...alert, createdAt: new Date().toLocaleDateString('en-GB') }],
-      };
-    });
+    setWatchlistAlerts((prev) => ({
+      ...prev,
+      [symbol]: [...(prev[symbol] || []), { ...alert, createdAt: new Date().toLocaleDateString('en-GB') }],
+    }));
   };
 
   const removeWatchlistAlert = (symbol: string, index: number) => {
-    setWatchlistAlerts((prev) => {
-      const list = prev[symbol] || [];
-      return {
-        ...prev,
-        [symbol]: list.filter((_, i) => i !== index),
-      };
-    });
+    setWatchlistAlerts((prev) => ({
+      ...prev,
+      [symbol]: (prev[symbol] || []).filter((_, itemIndex) => itemIndex !== index),
+    }));
   };
 
   const clearWatchlist = () => {
@@ -375,26 +381,24 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     setWatchlistAlerts({});
   };
 
-  const resetScannerFilters = () => {
-    setScannerFilters(initialFilters);
-  };
+  const resetScannerFilters = () => setScannerFilters(initialFilters);
 
   const runDemoScan = async () => {
     setIsScanning(true);
     const result = await dseApi.scannerRun();
-    if (result.ok && result.data?.ok) {
+    if (result.ok && result.data?.ok && sourceFromBackend(result.data.data_source) !== 'none') {
       applyScannerResult(result.data);
     } else {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      clearScannerData(result.error || result.data?.message || 'No real scanner result is available.');
       setScanTimestamp(timestamp());
     }
     setIsScanning(false);
   };
 
   const loadDemoPortfolio = () => {
-    setIsPortfolioConnected(true);
-    setPortfolioHoldings(portfolioHoldingsMockData);
-    setPortfolioSummary(portfolioSummaryMockData);
+    setIsPortfolioConnected(false);
+    setPortfolioHoldings([]);
+    setPortfolioSummary(emptyPortfolioSummary);
   };
 
   const disconnectPortfolio = () => {
@@ -404,37 +408,25 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   };
 
   const addPortfolioHoldingNote = (symbol: string, note: string) => {
-    setPortfolioHoldings((prev) =>
-      prev.map((hold) =>
-        hold.symbol === symbol ? { ...hold, notes: note, notesUpdatedAt: new Date().toLocaleDateString('en-GB') } : hold
-      )
-    );
+    setPortfolioHoldings((prev) => prev.map((holding) => (
+      holding.symbol === symbol
+        ? { ...holding, notes: note, notesUpdatedAt: new Date().toLocaleDateString('en-GB') }
+        : holding
+    )));
   };
 
   const recordPortfolioExit = (symbol: string, exitPrice: number, quantity: number, exitReason: string) => {
-    const holding = portfolioHoldings.find((h) => h.symbol === symbol);
+    const holding = portfolioHoldings.find((item) => item.symbol === symbol);
     if (!holding) return;
-
     const qtyToExit = Math.min(quantity, holding.quantity);
     const realizedPL = qtyToExit * exitPrice - qtyToExit * holding.averageCost;
-
-    setPortfolioHoldings((prev) =>
-      prev
-        .map((h) => {
-          if (h.symbol !== symbol) return h;
-          const newQty = h.quantity - qtyToExit;
-          if (newQty <= 0) return null;
-          const marketValue = newQty * h.lastPrice;
-          const costBasis = newQty * h.averageCost;
-          const unrealizedPL = marketValue - costBasis;
-          const unrealizedPLPercent = costBasis > 0 ? (unrealizedPL / costBasis) * 100 : 0;
-          return { ...h, quantity: newQty, marketValue, unrealizedPL, unrealizedPLPercent };
-        })
-        .filter((h): h is PortfolioHolding => h !== null)
-    );
-
-    const fee = 150;
+    const fee = 0;
     const plannedRisk = qtyToExit * Math.abs(holding.averageCost * 0.05);
+
+    setPortfolioHoldings((prev) => prev
+      .map((item) => item.symbol === symbol ? { ...item, quantity: item.quantity - qtyToExit } : item)
+      .filter((item) => item.quantity > 0));
+
     const newJournalEntry: JournalEntry = {
       id: `journ-exit-${Date.now()}`,
       symbol: holding.symbol,
@@ -444,46 +436,31 @@ export function MarketProvider({ children }: { children: ReactNode }) {
       side: 'LONG',
       setup: 'Portfolio Recorded Exit',
       grade: holding.grade,
-      score: 90,
+      score: 0,
       entryPrice: holding.averageCost,
       stopLoss: holding.averageCost * 0.95,
       target1: holding.averageCost * 1.15,
       target2: holding.averageCost * 1.25,
       quantity: qtyToExit,
       plannedRisk,
-      expectedRR: 3.0,
+      expectedRR: 0,
       status: 'CLOSED',
       exitPrice,
       exitDate: new Date().toISOString().split('T')[0],
       fees: fee,
-      realizedPL: realizedPL - fee,
-      rMultiple: plannedRisk > 0 ? parseFloat(((realizedPL - fee) / plannedRisk).toFixed(2)) : 0,
-      entryReason: 'Position imported from local demo portfolio state.',
+      realizedPL,
+      rMultiple: plannedRisk > 0 ? realizedPL / plannedRisk : 0,
+      entryReason: 'Position supplied by user/imported portfolio data.',
       exitReason,
-      whatWentWell: 'Recorded exit was logged locally for journal review.',
+      whatWentWell: '',
       whatWentWrong: '',
       ruleFollowed: true,
       mistakeTags: [],
       emotionalState: 'Neutral',
-      notes: `Local portfolio note: ${holding.notes}`,
-      tags: ['PortfolioExit', 'LocalOnly'],
+      notes: holding.notes || '',
+      tags: ['PortfolioExit'],
     };
-
     setJournalEntries((prev) => [newJournalEntry, ...prev]);
-
-    const updatedHoldings = portfolioHoldings
-      .map((h) => (h.symbol === symbol ? { ...h, quantity: h.quantity - qtyToExit } : h))
-      .filter((h) => h.quantity > 0);
-    const totalMarketVal = updatedHoldings.reduce((sum, h) => sum + h.quantity * h.lastPrice, 0);
-    const totalCostBasis = updatedHoldings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
-    const unrealizedPL = totalMarketVal - totalCostBasis;
-    setPortfolioSummary((prev) => ({
-      ...prev,
-      portfolioValue: totalMarketVal,
-      totalCost: totalCostBasis,
-      unrealizedPL,
-      unrealizedPLPercent: totalCostBasis > 0 ? (unrealizedPL / totalCostBasis) * 100 : 0,
-    }));
   };
 
   const addJournalEntry = (entry: Omit<JournalEntry, 'id'>) => {
@@ -491,98 +468,96 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   };
 
   const updateJournalEntry = (id: string, entryUpdates: Partial<JournalEntry>) => {
-    setJournalEntries((prev) =>
-      prev.map((entry) => {
-        if (entry.id !== id) return entry;
-        const updated = { ...entry, ...entryUpdates };
-        if (entryUpdates.quantity || entryUpdates.entryPrice || entryUpdates.stopLoss) {
-          updated.plannedRisk = updated.quantity * Math.abs(updated.entryPrice - updated.stopLoss);
-        }
-        if (entryUpdates.entryPrice || entryUpdates.stopLoss || entryUpdates.target1) {
-          const riskPerShare = Math.abs(updated.entryPrice - updated.stopLoss);
-          updated.expectedRR = riskPerShare > 0 ? (updated.target1 - updated.entryPrice) / riskPerShare : 0;
-        }
-        if (updated.status === 'CLOSED' && updated.exitPrice !== undefined) {
-          const priceDiff = updated.side === 'LONG' ? updated.exitPrice - updated.entryPrice : updated.entryPrice - updated.exitPrice;
-          updated.realizedPL = updated.quantity * priceDiff - (updated.fees || 0);
-          updated.rMultiple = updated.plannedRisk > 0 ? updated.realizedPL / updated.plannedRisk : 0;
-        }
-        return updated;
-      })
-    );
+    setJournalEntries((prev) => prev.map((entry) => {
+      if (entry.id !== id) return entry;
+      const updated = { ...entry, ...entryUpdates };
+      if (entryUpdates.quantity || entryUpdates.entryPrice || entryUpdates.stopLoss) {
+        updated.plannedRisk = updated.quantity * Math.abs(updated.entryPrice - updated.stopLoss);
+      }
+      if (entryUpdates.entryPrice || entryUpdates.stopLoss || entryUpdates.target1) {
+        const riskPerShare = Math.abs(updated.entryPrice - updated.stopLoss);
+        updated.expectedRR = riskPerShare > 0 ? (updated.target1 - updated.entryPrice) / riskPerShare : 0;
+      }
+      if (updated.status === 'CLOSED' && updated.exitPrice !== undefined) {
+        const priceDiff = updated.side === 'LONG'
+          ? updated.exitPrice - updated.entryPrice
+          : updated.entryPrice - updated.exitPrice;
+        updated.realizedPL = updated.quantity * priceDiff - (updated.fees || 0);
+        updated.rMultiple = updated.plannedRisk > 0 ? updated.realizedPL / updated.plannedRisk : 0;
+      }
+      return updated;
+    }));
   };
 
   const deleteJournalEntry = (id: string) => setJournalEntries((prev) => prev.filter((entry) => entry.id !== id));
   const clearJournal = () => setJournalEntries([]);
-  const loadDemoJournal = () => setJournalEntries(journalEntriesMockData);
+  const loadDemoJournal = () => setJournalEntries([]);
 
   return (
-    <MarketContext.Provider
-      value={{
-        candidates,
-        backendConnectionStatus,
-        backendMessage,
-        candidateDataSource,
-        scannerUniverseCount,
-        scannerEligibleCount,
-        refreshBackendData,
-        watchlistSymbols,
-        addToWatchlist,
-        removeFromWatchlist,
-        watchlistAlerts,
-        addWatchlistAlert,
-        removeWatchlistAlert,
-        clearWatchlist,
-        selectedScannerCandidateId,
-        setSelectedScannerCandidateId,
-        selectedSignalCandidateId,
-        setSelectedSignalCandidateId,
-        scannerFilters,
-        setScannerFilters,
-        resetScannerFilters,
-        activeSignalsTab,
-        setActiveSignalsTab,
-        runDemoScan,
-        isScanning,
-        scanTimestamp,
-        isPortfolioConnected,
-        setIsPortfolioConnected,
-        portfolioHoldings,
-        setPortfolioHoldings,
-        portfolioSummary,
-        loadDemoPortfolio,
-        disconnectPortfolio,
-        addPortfolioHoldingNote,
-        recordPortfolioExit,
-        journalEntries,
-        setJournalEntries,
-        addJournalEntry,
-        updateJournalEntry,
-        deleteJournalEntry,
-        clearJournal,
-        loadDemoJournal,
-        regimePeriod,
-        setRegimePeriod,
-        activeRegimeState,
-        setActiveRegimeState,
-        regimeTimestamp,
-        runRegimeRefresh,
-        isRefreshingRegime,
-        selectedSectorId,
-        setSelectedSectorId,
-        sectorTimestamp,
-        runSectorRefresh,
-        isRefreshingSectors,
-        backtestConfig,
-        setBacktestConfig,
-        isBacktestLoaded,
-        isBacktesting,
-        backtestResult,
-        selectedBacktestTradeId,
-        setSelectedBacktestTradeId,
-        runDemoBacktest,
-      }}
-    >
+    <MarketContext.Provider value={{
+      candidates,
+      backendConnectionStatus,
+      backendMessage,
+      candidateDataSource,
+      scannerUniverseCount,
+      scannerEligibleCount,
+      refreshBackendData,
+      watchlistSymbols,
+      addToWatchlist,
+      removeFromWatchlist,
+      watchlistAlerts,
+      addWatchlistAlert,
+      removeWatchlistAlert,
+      clearWatchlist,
+      selectedScannerCandidateId,
+      setSelectedScannerCandidateId,
+      selectedSignalCandidateId,
+      setSelectedSignalCandidateId,
+      scannerFilters,
+      setScannerFilters,
+      resetScannerFilters,
+      activeSignalsTab,
+      setActiveSignalsTab,
+      runDemoScan,
+      isScanning,
+      scanTimestamp,
+      isPortfolioConnected,
+      setIsPortfolioConnected,
+      portfolioHoldings,
+      setPortfolioHoldings,
+      portfolioSummary,
+      loadDemoPortfolio,
+      disconnectPortfolio,
+      addPortfolioHoldingNote,
+      recordPortfolioExit,
+      journalEntries,
+      setJournalEntries,
+      addJournalEntry,
+      updateJournalEntry,
+      deleteJournalEntry,
+      clearJournal,
+      loadDemoJournal,
+      regimePeriod,
+      setRegimePeriod,
+      activeRegimeState,
+      setActiveRegimeState,
+      regimeTimestamp,
+      runRegimeRefresh,
+      isRefreshingRegime,
+      selectedSectorId,
+      setSelectedSectorId,
+      sectorTimestamp,
+      runSectorRefresh,
+      isRefreshingSectors,
+      backtestConfig,
+      setBacktestConfig,
+      isBacktestLoaded,
+      isBacktesting,
+      backtestResult,
+      selectedBacktestTradeId,
+      setSelectedBacktestTradeId,
+      runDemoBacktest,
+    }}>
       {children}
     </MarketContext.Provider>
   );
@@ -590,8 +565,6 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
 export function useMarket() {
   const context = useContext(MarketContext);
-  if (!context) {
-    throw new Error('useMarket must be used within a MarketProvider');
-  }
+  if (!context) throw new Error('useMarket must be used within a MarketProvider');
   return context;
 }
