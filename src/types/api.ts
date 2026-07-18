@@ -81,6 +81,74 @@ export interface DseStatusResponse {
   message?: string;
 }
 
+export interface OhlcRow {
+  symbol: string;
+  trade_date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  trade?: number | null;
+  value?: number | null;
+}
+
+export interface OhlcPreviewResponse {
+  ok: boolean;
+  mode: 'local_preview';
+  filename: string;
+  detected_headers: string[];
+  normalized_headers: string[];
+  valid_rows: number;
+  invalid_rows: number;
+  symbols_count: number;
+  latest_trade_date: string | null;
+  preview_rows: OhlcRow[];
+  warnings: string[];
+  errors: string[];
+}
+
+export interface DatabaseStatusResponse {
+  configured: boolean;
+  connected: boolean;
+  database_type: 'postgres';
+  message: string;
+}
+
+export interface DatabaseInitResponse {
+  ok: boolean;
+  message: string;
+}
+
+export interface DatabaseImportResponse {
+  ok: boolean;
+  data_source: 'database';
+  inserted_rows: number;
+  updated_rows: number;
+  invalid_rows: number;
+  symbols_count: number;
+  latest_trade_date: string | null;
+  message: string;
+}
+
+export interface DataStatusResponse {
+  data_available: boolean;
+  data_source: 'database' | 'local_csv' | 'none';
+  stored_path: string | null;
+  symbols_count: number | null;
+  rows_count: number | null;
+  latest_trade_date: string | null;
+  earliest_trade_date: string | null;
+  message: string;
+}
+
+export interface DataSourceResponse {
+  preferred_source: 'database' | 'local_csv' | 'demo';
+  database_available: boolean;
+  local_csv_available: boolean;
+  fallback_order: Array<'database' | 'local_csv' | 'demo'>;
+}
+
 export type CollectorStatus = 'queued' | 'running' | 'completed' | 'failed';
 
 export interface CollectorRunRequest {
