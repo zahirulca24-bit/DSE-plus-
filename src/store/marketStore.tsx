@@ -51,10 +51,12 @@ const emptyPortfolioSummary: PortfolioSummary = {
 type CandidateDataSource = 'none' | 'database' | 'local_csv';
 
 interface MarketContextType {
-  candidates: Candidate[];
+  scannerCandidates: Candidate[];
+  signalCandidates: Candidate[];
   backendConnectionStatus: 'Not Configured' | 'Checking' | 'Connected' | 'Error';
   backendMessage: string;
-  candidateDataSource: CandidateDataSource;
+  scannerDataSource: CandidateDataSource;
+  signalDataSource: CandidateDataSource;
   scannerUniverseCount: number;
   scannerEligibleCount: number;
   refreshBackendData: () => Promise<void>;
@@ -79,6 +81,7 @@ interface MarketContextType {
   runDemoScan: () => Promise<void>;
   isScanning: boolean;
   scanTimestamp: string;
+  signalsTimestamp: string;
 
   isPortfolioConnected: boolean;
   setIsPortfolioConnected: (connected: boolean) => void;
@@ -207,10 +210,12 @@ function mapBackendCandidate(
 }
 
 export function MarketProvider({ children }: { children: ReactNode }) {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [scannerCandidates, setScannerCandidates] = useState<Candidate[]>([]);
+  const [signalCandidates, setSignalCandidates] = useState<Candidate[]>([]);
   const [backendConnectionStatus, setBackendConnectionStatus] = useState<MarketContextType['backendConnectionStatus']>('Checking');
   const [backendMessage, setBackendMessage] = useState<string>('Checking backend health...');
-  const [candidateDataSource, setCandidateDataSource] = useState<CandidateDataSource>('none');
+  const [scannerDataSource, setScannerDataSource] = useState<CandidateDataSource>('none');
+  const [signalDataSource, setSignalDataSource] = useState<CandidateDataSource>('none');
   const [scannerUniverseCount, setScannerUniverseCount] = useState<number>(0);
   const [scannerEligibleCount, setScannerEligibleCount] = useState<number>(0);
 
@@ -223,6 +228,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const [activeSignalsTab, setActiveSignalsTab] = useState<'qualified' | 'near' | 'rejected' | 'all'>('qualified');
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanTimestamp, setScanTimestamp] = useState<string>('Not run');
+  const [signalsTimestamp, setSignalsTimestamp] = useState<string>('Not run');
 
   const [isPortfolioConnected, setIsPortfolioConnected] = useState<boolean>(false);
   const [portfolioHoldings, setPortfolioHoldings] = useState<PortfolioHolding[]>([]);
@@ -265,22 +271,26 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const [selectedBacktestTradeId, setSelectedBacktestTradeId] = useState<string | null>(null);
   const backtestResult: BacktestResult | null = null;
 
-  const clearScannerData = useCallback((message: string) => {
-    setCandidates([]);
-    setCandidateDataSource('none');
+  const clearScannerData = useCallback(() => {
+    setScannerCandidates([]);
+    setScannerDataSource('none');
     setScannerUniverseCount(0);
     setScannerEligibleCount(0);
-    setBackendMessage(message);
+  }, []);
+
+  const clearSignalsData = useCallback(() => {
+    setSignalCandidates([]);
+    setSignalDataSource('none');
   }, []);
 
   const applyScannerResult = useCallback((payload: DseScannerLatestResponse) => {
     const source = sourceFromBackend(payload.data_source);
     if (source === 'none') {
-      clearScannerData('Backend returned demo/unsupported scanner data. No fake data is displayed.');
+      clearScannerData();
       return;
     }
-    setCandidates(payload.candidates.map((item, index) => mapBackendCandidate(item, index, source)));
-    setCandidateDataSource(source);
+    setScannerCandidates(payload.candidates.map((item, index) => mapBackendCandidate(item, index, source)));
+    setScannerDataSource(source);
     setScannerUniverseCount(payload.scanned_symbols || payload.candidates.length);
     setScannerEligibleCount(payload.eligible_symbols || payload.candidates.length);
     setScanTimestamp(formatDateTime(payload.generated_at));
@@ -289,21 +299,22 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const applySignalsResult = useCallback((payload: DseSignalsResponse) => {
     const source = sourceFromBackend(payload.data_source);
     if (source === 'none') {
-      clearScannerData('Backend returned demo/unsupported signal data. No fake data is displayed.');
+      clearSignalsData();
       return;
     }
-    setCandidates(payload.signals.map((item, index) => mapBackendCandidate(item, index, source)));
-    setCandidateDataSource(source);
-    setScannerUniverseCount(payload.signals.length);
-    setScannerEligibleCount(payload.signals.length);
-  }, [clearScannerData]);
+    setSignalCandidates(payload.signals.map((item, index) => mapBackendCandidate(item, index, source)));
+    setSignalDataSource(source);
+    setSignalsTimestamp(timestamp());
+  }, [clearSignalsData]);
 
   const refreshBackendData = useCallback(async () => {
     setBackendConnectionStatus('Checking');
     const health = await dseApi.health();
     if (!health.ok) {
       setBackendConnectionStatus(health.error?.includes('not configured') ? 'Not Configured' : 'Error');
-      clearScannerData(health.error || 'Backend health check failed. No fake fallback is enabled.');
+      setBackendMessage(health.error || 'Backend health check failed. No fake fallback is enabled.');
+      clearScannerData();
+      clearSignalsData();
       return;
     }
 
@@ -313,17 +324,17 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     const latest = await dseApi.scannerLatest();
     if (latest.ok && latest.data?.ok && latest.data.candidates.length > 0 && sourceFromBackend(latest.data.data_source) !== 'none') {
       applyScannerResult(latest.data);
-      return;
+    } else {
+      clearScannerData();
     }
 
     const signals = await dseApi.signals();
     if (signals.ok && signals.data?.signals?.length && sourceFromBackend(signals.data.data_source) !== 'none') {
       applySignalsResult(signals.data);
-      return;
+    } else {
+      clearSignalsData();
     }
-
-    clearScannerData('Backend is connected, but no real scanner dataset is available yet.');
-  }, [applyScannerResult, applySignalsResult, clearScannerData]);
+  }, [applyScannerResult, applySignalsResult, clearScannerData, clearSignalsData]);
 
   useEffect(() => {
     void refreshBackendData();
@@ -386,7 +397,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     if (result.ok && result.data?.ok && sourceFromBackend(result.data.data_source) !== 'none') {
       applyScannerResult(result.data);
     } else {
-      clearScannerData(result.error || result.data?.message || 'No real scanner result is available.');
+      clearScannerData();
       setScanTimestamp(timestamp());
     }
     setIsScanning(false);
@@ -492,10 +503,12 @@ export function MarketProvider({ children }: { children: ReactNode }) {
 
   return (
     <MarketContext.Provider value={{
-      candidates,
+      scannerCandidates,
+      signalCandidates,
       backendConnectionStatus,
       backendMessage,
-      candidateDataSource,
+      scannerDataSource,
+      signalDataSource,
       scannerUniverseCount,
       scannerEligibleCount,
       refreshBackendData,
@@ -518,6 +531,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
       runDemoScan,
       isScanning,
       scanTimestamp,
+      signalsTimestamp,
       isPortfolioConnected,
       setIsPortfolioConnected,
       portfolioHoldings,

@@ -6,21 +6,23 @@ import { useMarket } from '../store/marketStore';
 
 export default function Watchlist() {
   const {
-    candidates,
+    scannerCandidates,
+    signalCandidates,
     watchlistSymbols,
     addToWatchlist,
     removeFromWatchlist,
     clearWatchlist,
-    candidateDataSource,
+    scannerDataSource,
+    signalDataSource,
     scanTimestamp,
   } = useMarket();
 
-  const available = candidates.filter((item) => !watchlistSymbols.includes(item.symbol));
+  const available = scannerCandidates.filter((item) => !watchlistSymbols.includes(item.symbol));
   const rows = watchlistSymbols.map((symbol) => ({
     symbol,
-    candidate: candidates.find((item) => item.symbol === symbol),
+    candidate: scannerCandidates.find((item) => item.symbol === symbol) || signalCandidates.find((item) => item.symbol === symbol),
   }));
-  const realDataReady = candidateDataSource !== 'none';
+  const realDataReady = scannerDataSource !== 'none' || signalDataSource !== 'none';
 
   return (
     <PageContainer id="watchlist-route">

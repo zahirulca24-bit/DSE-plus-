@@ -12,7 +12,7 @@ import { RefreshCw, RotateCcw, Activity, Layers, Globe, Clock } from 'lucide-rea
 
 export default function Scanner() {
   const {
-    candidates,
+    scannerCandidates,
     scannerFilters,
     resetScannerFilters,
     runDemoScan,
@@ -20,24 +20,24 @@ export default function Scanner() {
     scanTimestamp,
     selectedScannerCandidateId,
     setSelectedScannerCandidateId,
-    candidateDataSource,
+    scannerDataSource,
     backendConnectionStatus,
     scannerUniverseCount,
     scannerEligibleCount,
   } = useMarket();
 
   const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
-  const hasRealData = candidateDataSource !== 'none';
-  const sourceLabel = candidateDataSource === 'database'
+  const hasRealData = scannerDataSource !== 'none';
+  const sourceLabel = scannerDataSource === 'database'
     ? 'DATABASE DATA'
-    : candidateDataSource === 'local_csv'
+    : scannerDataSource === 'local_csv'
       ? 'GOOGLE DRIVE-BACKED DATA'
       : 'NO LIVE DATA';
 
-  const sectors = Array.from(new Set(candidates.map((c) => c.sector))).filter(Boolean);
-  const setups = Array.from(new Set(candidates.map((c) => c.setup))).filter(Boolean);
+  const sectors = Array.from(new Set(scannerCandidates.map((c) => c.sector))).filter(Boolean);
+  const setups = Array.from(new Set(scannerCandidates.map((c) => c.setup))).filter(Boolean);
 
-  const filteredCandidates = candidates.filter((item) => {
+  const filteredCandidates = scannerCandidates.filter((item) => {
     if (
       scannerFilters.search
       && !item.symbol.toLowerCase().includes(scannerFilters.search.toLowerCase())
