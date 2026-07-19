@@ -659,11 +659,11 @@ interface ScannerDetailDrawerProps {
 }
 
 export function ScannerDetailDrawer({ id, onClose }: ScannerDetailDrawerProps) {
-  const { candidates, addToWatchlist, watchlistSymbols } = useMarket();
+  const { scannerCandidates, addToWatchlist, watchlistSymbols } = useMarket();
   const navigate = useNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  const item = candidates.find((c) => c.id === id);
+  const item = scannerCandidates.find((c) => c.id === id);
 
   // Close on Escape Key
   useEffect(() => {
@@ -1039,8 +1039,8 @@ interface SignalAnalysisDrawerProps {
 }
 
 export function SignalAnalysisDrawer({ id, onClose }: SignalAnalysisDrawerProps) {
-  const { candidates, addToWatchlist, watchlistSymbols } = useMarket();
-  const item = candidates.find((c) => c.id === id);
+  const { signalCandidates, addToWatchlist, watchlistSymbols } = useMarket();
+  const item = signalCandidates.find((c) => c.id === id);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

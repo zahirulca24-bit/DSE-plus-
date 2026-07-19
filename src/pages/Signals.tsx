@@ -9,37 +9,37 @@ import { Activity, Info, BarChart4, Compass, Award } from 'lucide-react';
 
 export default function Signals() {
   const {
-    candidates,
+    signalCandidates,
     activeSignalsTab,
     setActiveSignalsTab,
     selectedSignalCandidateId,
     setSelectedSignalCandidateId,
-    scanTimestamp,
-    candidateDataSource,
+    signalsTimestamp,
+    signalDataSource,
     backendConnectionStatus,
   } = useMarket();
 
-  const hasRealData = candidateDataSource !== 'none';
-  const sourceLabel = candidateDataSource === 'database'
+  const hasRealData = signalDataSource !== 'none';
+  const sourceLabel = signalDataSource === 'database'
     ? 'DATABASE DATA'
-    : candidateDataSource === 'local_csv'
+    : signalDataSource === 'local_csv'
       ? 'GOOGLE DRIVE-BACKED DATA'
       : 'NO LIVE DATA';
 
-  const totalQualifiedCount = candidates.filter((c) => c.grade === 'A+' || c.grade === 'A').length;
-  const totalAPlusCount = candidates.filter((c) => c.grade === 'A+').length;
-  const totalACount = candidates.filter((c) => c.grade === 'A').length;
-  const totalNearSetupsCount = candidates.filter((c) => c.grade === 'B+').length;
-  const rrValues = candidates.filter((c) => c.grade !== 'REJECT').map((c) => c.riskReward);
+  const totalQualifiedCount = signalCandidates.filter((c) => c.grade === 'A+' || c.grade === 'A').length;
+  const totalAPlusCount = signalCandidates.filter((c) => c.grade === 'A+').length;
+  const totalACount = signalCandidates.filter((c) => c.grade === 'A').length;
+  const totalNearSetupsCount = signalCandidates.filter((c) => c.grade === 'B+').length;
+  const rrValues = signalCandidates.filter((c) => c.grade !== 'REJECT').map((c) => c.riskReward);
   const averageRR = rrValues.length > 0 ? (rrValues.reduce((sum, val) => sum + val, 0) / rrValues.length).toFixed(2) : '0.00';
 
   const filteredCandidates = activeSignalsTab === 'qualified'
-    ? candidates.filter((c) => c.grade === 'A+' || c.grade === 'A')
+    ? signalCandidates.filter((c) => c.grade === 'A+' || c.grade === 'A')
     : activeSignalsTab === 'near'
-      ? candidates.filter((c) => c.grade === 'B+')
+      ? signalCandidates.filter((c) => c.grade === 'B+')
       : activeSignalsTab === 'rejected'
-        ? candidates.filter((c) => c.grade === 'REJECT')
-        : candidates;
+        ? signalCandidates.filter((c) => c.grade === 'REJECT')
+        : signalCandidates;
 
   return (
     <PageContainer id="signals-route-stage">
@@ -58,7 +58,7 @@ export default function Signals() {
           <p className="max-w-2xl text-xs leading-relaxed text-text-secondary">Review only backend-generated DSE signal candidates from verified market data. No demo fallback is enabled.</p>
         </div>
         <div className="max-w-xs rounded border border-border-dark bg-[#161B22]/20 p-2 font-mono text-[10px] leading-snug text-text-muted">
-          Last processed signal wave: <span className="font-bold text-white">{scanTimestamp}</span>. Source: <span className="font-bold text-white">{sourceLabel}</span>.
+          Last processed signal wave: <span className="font-bold text-white">{signalsTimestamp}</span>. Source: <span className="font-bold text-white">{sourceLabel}</span>.
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export default function Signals() {
         <div className="flex self-start rounded-lg bg-[#161B22]/40 p-0.5 gap-1.5">
           <button onClick={() => setActiveSignalsTab('qualified')} className={`rounded-md px-3.5 py-1.5 font-mono text-xs font-semibold ${activeSignalsTab === 'qualified' ? 'bg-[#21262D] text-white' : 'text-text-secondary'}`}>QUALIFIED ({totalQualifiedCount})</button>
           <button onClick={() => setActiveSignalsTab('near')} className={`rounded-md px-3.5 py-1.5 font-mono text-xs font-semibold ${activeSignalsTab === 'near' ? 'bg-[#21262D] text-white' : 'text-text-secondary'}`}>NEAR SETUP ({totalNearSetupsCount})</button>
-          <button onClick={() => setActiveSignalsTab('rejected')} className={`rounded-md px-3.5 py-1.5 font-mono text-xs font-semibold ${activeSignalsTab === 'rejected' ? 'bg-[#21262D] text-white' : 'text-text-secondary'}`}>REJECTED ({candidates.filter((c) => c.grade === 'REJECT').length})</button>
+          <button onClick={() => setActiveSignalsTab('rejected')} className={`rounded-md px-3.5 py-1.5 font-mono text-xs font-semibold ${activeSignalsTab === 'rejected' ? 'bg-[#21262D] text-white' : 'text-text-secondary'}`}>REJECTED ({signalCandidates.filter((c) => c.grade === 'REJECT').length})</button>
           <button onClick={() => setActiveSignalsTab('all')} className={`rounded-md px-3.5 py-1.5 font-mono text-xs font-semibold ${activeSignalsTab === 'all' ? 'bg-[#21262D] text-white' : 'text-text-secondary'}`}>ALL</button>
         </div>
         <div className="flex items-center gap-1 font-mono text-[10px] text-text-secondary"><Info className="h-3.5 w-3.5 text-[#58A6FF]" /><span>A+/A Qualified, B+ Watch, Reject &lt;85.</span></div>
