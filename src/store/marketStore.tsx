@@ -181,7 +181,7 @@ function mapBackendCandidate(
     grade: item.grade,
     score: Number(item.score ?? 0),
     price,
-    changePercent: 0,
+    changePercent: item.change_percent !== undefined && item.change_percent !== null ? Number(item.change_percent) : null,
     relativeVolume: Number(item.volume_ratio ?? 0),
     averageVolume: 'Backend derived',
     turnover: 'Backend derived',

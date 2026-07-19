@@ -566,7 +566,13 @@ export function ScannerResultsTable({ items, onViewDetails }: ScannerResultsTabl
           </thead>
           <tbody className="divide-y divide-border-dark/40">
             {paginated.map((cand) => {
-              const isUp = cand.changePercent >= 0;
+              const hasChange = cand.changePercent !== null && cand.changePercent !== undefined;
+              const isUp = hasChange && cand.changePercent! > 0;
+              const isDown = hasChange && cand.changePercent! < 0;
+              const changeColor = isUp ? 'text-[#238636]' : isDown ? 'text-[#DA3633]' : 'text-text-secondary';
+              const changeText = hasChange
+                ? `${isUp ? '+' : ''}${cand.changePercent!.toFixed(2)}%`
+                : '—';
               return (
                 <tr
                   key={cand.id}
@@ -599,8 +605,8 @@ export function ScannerResultsTable({ items, onViewDetails }: ScannerResultsTabl
                   <td className="py-3 px-3 text-white font-semibold">
                     ৳{cand.price.toFixed(2)}
                   </td>
-                  <td className={`py-3 px-3 font-bold ${isUp ? 'text-[#238636]' : 'text-[#DA3633]'}`}>
-                    {isUp ? '+' : ''}{cand.changePercent.toFixed(2)}%
+                  <td className={`py-3 px-3 font-bold ${changeColor}`}>
+                    {changeText}
                   </td>
                   <td className="py-3 px-3 text-text-secondary">
                     {cand.relativeVolume.toFixed(1)}x
@@ -723,21 +729,32 @@ export function ScannerDetailDrawer({ id, onClose }: ScannerDetailDrawerProps) {
             </div>
 
             {/* Price and score stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#161B22]/30 p-3 rounded-md border border-border-dark/60 text-center">
-                <span className="text-[10px] font-mono text-text-secondary block uppercase">LTP / Current Price</span>
-                <span className="text-lg font-mono font-black text-white mt-1 block">৳{item.price.toFixed(2)}</span>
-                <span className={`text-[10px] font-mono font-bold mt-1 inline-flex ${item.changePercent >= 0 ? 'text-[#238636]' : 'text-[#DA3633]'}`}>
-                  {item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%
-                </span>
-              </div>
+            {(() => {
+              const hasChange = item.changePercent !== null && item.changePercent !== undefined;
+              const isUp = hasChange && item.changePercent! > 0;
+              const isDown = hasChange && item.changePercent! < 0;
+              const changeColor = isUp ? 'text-[#238636]' : isDown ? 'text-[#DA3633]' : 'text-text-secondary';
+              const changeText = hasChange
+                ? `${isUp ? '+' : ''}${item.changePercent!.toFixed(2)}%`
+                : 'Not available';
+              return (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#161B22]/30 p-3 rounded-md border border-border-dark/60 text-center">
+                    <span className="text-[10px] font-mono text-text-secondary block uppercase">LTP / Current Price</span>
+                    <span className="text-lg font-mono font-black text-white mt-1 block">৳{item.price.toFixed(2)}</span>
+                    <span className={`text-[10px] font-mono font-bold mt-1 inline-flex ${changeColor}`}>
+                      {changeText}
+                    </span>
+                  </div>
 
-              <div className="bg-[#161B22]/30 p-3 rounded-md border border-border-dark/60 text-center">
-                <span className="text-[10px] font-mono text-text-secondary block uppercase">Technical Score</span>
-                <span className="text-lg font-mono font-black text-[#58A6FF] mt-1 block">{item.score}/100</span>
-                <span className="text-[10px] font-mono text-text-muted mt-1 block uppercase">Grade Rank #{item.rank}</span>
-              </div>
-            </div>
+                  <div className="bg-[#161B22]/30 p-3 rounded-md border border-border-dark/60 text-center">
+                    <span className="text-[10px] font-mono text-text-secondary block uppercase">Technical Score</span>
+                    <span className="text-lg font-mono font-black text-[#58A6FF] mt-1 block">{item.score}/100</span>
+                    <span className="text-[10px] font-mono text-text-muted mt-1 block uppercase">Grade Rank #{item.rank}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Structure metrics layout */}
             <div className="space-y-3">
@@ -797,7 +814,7 @@ export function ScannerDetailDrawer({ id, onClose }: ScannerDetailDrawerProps) {
             </div>
 
             {/* Condition assessment lists */}
-            <div className="space-y-4 border-t border-border-dark/60 pt-4">
+            <div className="space-y-4 border-t border-border-dark/70 pt-4">
               <ReasonList
                 reasons={item.qualificationReasons}
                 title="Qualified Strengths"

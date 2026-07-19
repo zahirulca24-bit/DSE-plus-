@@ -53,6 +53,7 @@ export interface DseBackendCandidate {
   support?: number | null;
   resistance?: number | null;
   side?: 'LONG' | 'SHORT' | null;
+  change_percent?: number | null;
 }
 
 export interface DseSignalsResponse {
