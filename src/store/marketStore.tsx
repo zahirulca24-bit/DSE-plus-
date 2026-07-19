@@ -157,7 +157,7 @@ function mapEntryStatus(status?: string): Candidate['entryStatus'] {
 
 function sourceFromBackend(value?: string): CandidateDataSource {
   if (value === 'database') return 'database';
-  if (value === 'local_csv' || value === 'google_drive') return 'local_csv';
+  if (value === 'local_csv') return 'local_csv';
   return 'none';
 }
 
@@ -202,7 +202,7 @@ function mapBackendCandidate(
     missingConditions: item.warnings || [],
     rejectionReasons: item.signal_status === 'rejected' ? item.warnings || ['Rejected by backend scanner rule.'] : [],
     updatedAt: item.trade_date || timestamp(),
-    dataMode: source === 'database' ? 'Database' : 'Google Drive-backed cache',
+    dataMode: source === 'database' ? 'Database' : 'Backend local cache',
   };
 }
 
@@ -276,7 +276,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const applyScannerResult = useCallback((payload: DseScannerLatestResponse) => {
     const source = sourceFromBackend(payload.data_source);
     if (source === 'none') {
-      clearScannerData('Backend returned demo/unsupported scanner data. No fake data is displayed.');
+      clearScannerData(`Backend returned unsupported scanner data source "${payload.data_source || 'unknown'}". Stale Google Drive data is rejected.`);
       return;
     }
     setCandidates(payload.candidates.map((item, index) => mapBackendCandidate(item, index, source)));
@@ -289,7 +289,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const applySignalsResult = useCallback((payload: DseSignalsResponse) => {
     const source = sourceFromBackend(payload.data_source);
     if (source === 'none') {
-      clearScannerData('Backend returned demo/unsupported signal data. No fake data is displayed.');
+      clearScannerData(`Backend returned unsupported signal data source "${payload.data_source || 'unknown'}". Stale Google Drive data is rejected.`);
       return;
     }
     setCandidates(payload.signals.map((item, index) => mapBackendCandidate(item, index, source)));
@@ -311,13 +311,13 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     setBackendMessage(`Health endpoint responded OK: ${health.data?.app || 'DSE Pulse Backend'}`);
 
     const latest = await dseApi.scannerLatest();
-    if (latest.ok && latest.data?.ok && latest.data.candidates.length > 0 && sourceFromBackend(latest.data.data_source) !== 'none') {
+    if (latest.ok && latest.data?.ok && latest.data.candidates.length > 0) {
       applyScannerResult(latest.data);
       return;
     }
 
     const signals = await dseApi.signals();
-    if (signals.ok && signals.data?.signals?.length && sourceFromBackend(signals.data.data_source) !== 'none') {
+    if (signals.ok && signals.data?.signals?.length) {
       applySignalsResult(signals.data);
       return;
     }
@@ -383,7 +383,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const runDemoScan = async () => {
     setIsScanning(true);
     const result = await dseApi.scannerRun();
-    if (result.ok && result.data?.ok && sourceFromBackend(result.data.data_source) !== 'none') {
+    if (result.ok && result.data?.ok) {
       applyScannerResult(result.data);
     } else {
       clearScannerData(result.error || result.data?.message || 'No real scanner result is available.');
