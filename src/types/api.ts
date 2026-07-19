@@ -44,6 +44,15 @@ export interface DseBackendCandidate {
   reasons?: string[];
   warnings?: string[];
   data_mode?: string;
+  entry_low?: number | null;
+  entry_high?: number | null;
+  stop_loss?: number | null;
+  target1?: number | null;
+  target2?: number | null;
+  target3?: number | null;
+  support?: number | null;
+  resistance?: number | null;
+  side?: 'LONG' | 'SHORT' | null;
 }
 
 export interface DseSignalsResponse {
