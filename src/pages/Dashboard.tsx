@@ -75,7 +75,7 @@ export default function Dashboard() {
             </div>
             <div className="rounded-lg border border-border-dark bg-[#161B22]/40 p-4">
               <div className="font-bold text-white">Data Source</div>
-              <div className="mt-2">{dataReady ? 'Google Drive-backed backend cache' : 'No real market dataset loaded'}</div>
+              <div className="mt-2">{dataReady ? 'Backend local cache' : 'No real market dataset loaded'}</div>
               <div className="mt-1">Mock/demo market values are disabled.</div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { ApiResult, DseScannerLatestResponse, DseSignalsResponse } from '../types/api';
 
-const REAL_STORAGE_SOURCES = new Set(['database', 'local_csv', 'google_drive', 'vercel_blob', 'blob']);
+const REAL_STORAGE_SOURCES = new Set(['database', 'local_csv', 'vercel_blob', 'blob']);
 
 function normalizeSource(value: string): string {
   const normalized = value.toLowerCase();

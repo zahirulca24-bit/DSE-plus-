@@ -23,7 +23,7 @@ export default function Signals() {
   const sourceLabel = candidateDataSource === 'database'
     ? 'DATABASE DATA'
     : candidateDataSource === 'local_csv'
-      ? 'GOOGLE DRIVE-BACKED DATA'
+      ? 'BACKEND LOCAL CACHE'
       : 'NO LIVE DATA';
 
   const totalQualifiedCount = candidates.filter((c) => c.grade === 'A+' || c.grade === 'A').length;
@@ -84,7 +84,7 @@ export default function Signals() {
       {filteredCandidates.length === 0 ? (
         <div className="mx-auto my-6 max-w-md rounded-xl border border-dashed border-border-dark bg-[#0D1117]/40 p-12 text-center">
           <p className="mb-1 text-sm font-semibold uppercase tracking-wider text-white">No real signals available</p>
-          <p className="text-xs text-text-secondary">Connect Drive-backed market data and run the backend scanner. Mock signals are disabled.</p>
+          <p className="text-xs text-text-secondary">Connect backend local cache and run the backend scanner. Mock signals are disabled.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

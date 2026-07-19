@@ -31,7 +31,7 @@ export default function Scanner() {
   const sourceLabel = candidateDataSource === 'database'
     ? 'DATABASE DATA'
     : candidateDataSource === 'local_csv'
-      ? 'GOOGLE DRIVE-BACKED DATA'
+      ? 'BACKEND LOCAL CACHE'
       : 'NO LIVE DATA';
 
   const sectors = Array.from(new Set(candidates.map((c) => c.sector))).filter(Boolean);
