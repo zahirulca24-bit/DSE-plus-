@@ -63,7 +63,14 @@ export function SetupBadge({ setup }: { setup: string }) {
 }
 
 // 4. Side Badge
-export function SideBadge({ side }: { side: 'LONG' | 'SHORT' }) {
+export function SideBadge({ side }: { side?: 'LONG' | 'SHORT' | null }) {
+  if (!side) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold border bg-text-secondary/10 text-text-secondary border-text-secondary/20 uppercase tracking-wider">
+        Not available
+      </span>
+    );
+  }
   const isLong = side === 'LONG';
   return (
     <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold border uppercase ${
@@ -610,7 +617,7 @@ export function ScannerResultsTable({ items, onViewDetails }: ScannerResultsTabl
                     <EntryStatusBadge status={cand.entryStatus} />
                   </td>
                   <td className="py-3 px-3 text-white font-medium">
-                    {cand.riskReward.toFixed(2)}x
+                    {cand.riskReward !== null && cand.riskReward !== undefined ? `${cand.riskReward.toFixed(2)}x` : '—'}
                   </td>
                   <td className="py-3 px-3">
                     <button
@@ -752,27 +759,39 @@ export function ScannerDetailDrawer({ id, onClose }: ScannerDetailDrawerProps) {
                 </div>
                 <div className="flex items-center justify-between border-b border-border-dark/20 pb-1.5">
                   <span className="text-text-secondary">Entry Low:</span>
-                  <span className="text-white font-semibold">৳{item.entryLow.toFixed(2)}</span>
+                  <span className="text-white font-semibold">
+                    {item.entryLow !== null && item.entryLow !== undefined ? `৳${item.entryLow.toFixed(2)}` : '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-border-dark/20 pb-1.5">
                   <span className="text-text-secondary">Entry High:</span>
-                  <span className="text-white font-semibold">৳{item.entryHigh.toFixed(2)}</span>
+                  <span className="text-white font-semibold">
+                    {item.entryHigh !== null && item.entryHigh !== undefined ? `৳${item.entryHigh.toFixed(2)}` : '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-border-dark/20 pb-1.5">
                   <span className="text-text-secondary">Stop Loss:</span>
-                  <span className="text-[#DA3633] font-bold">৳{item.stopLoss.toFixed(2)}</span>
+                  <span className="text-[#DA3633] font-bold">
+                    {item.stopLoss !== null && item.stopLoss !== undefined ? `৳${item.stopLoss.toFixed(2)}` : '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-border-dark/20 pb-1.5">
                   <span className="text-text-secondary">Target 1:</span>
-                  <span className="text-[#238636] font-bold">৳{item.target1.toFixed(2)}</span>
+                  <span className="text-[#238636] font-bold">
+                    {item.target1 !== null && item.target1 !== undefined ? `৳${item.target1.toFixed(2)}` : '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-border-dark/20 pb-1.5">
                   <span className="text-text-secondary">Target 2:</span>
-                  <span className="text-[#238636] font-bold">৳{item.target2.toFixed(2)}</span>
+                  <span className="text-[#238636] font-bold">
+                    {item.target2 !== null && item.target2 !== undefined ? `৳${item.target2.toFixed(2)}` : '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-border-dark/20 pb-1.5">
                   <span className="text-text-secondary">Risk / Reward:</span>
-                  <span className="text-[#58A6FF] font-black">{item.riskReward.toFixed(2)}x</span>
+                  <span className="text-[#58A6FF] font-black">
+                    {item.riskReward !== null && item.riskReward !== undefined ? `${item.riskReward.toFixed(2)}x` : '—'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -893,7 +912,9 @@ export function SignalCard({ item, onViewAnalysis }: SignalCardProps) {
             <div className="text-white text-right font-bold font-mono">৳{item.price.toFixed(2)}</div>
 
             <div className="text-text-secondary">Risk / Reward:</div>
-            <div className="text-[#58A6FF] text-right font-black font-mono">{item.riskReward.toFixed(2)}x</div>
+            <div className="text-[#58A6FF] text-right font-black font-mono">
+              {item.riskReward !== null && item.riskReward !== undefined ? `${item.riskReward.toFixed(2)}x` : '—'}
+            </div>
 
             <div className="text-text-secondary">Entry Status:</div>
             <div className="text-right"><EntryStatusBadge status={item.entryStatus} /></div>
@@ -903,15 +924,23 @@ export function SignalCard({ item, onViewAnalysis }: SignalCardProps) {
           <div className="p-2.5 rounded-lg border border-border-dark/50 bg-[#161B22]/30 text-[11px] font-mono grid grid-cols-3 gap-2 text-center">
             <div>
               <span className="text-text-secondary uppercase block text-[9px]">Entry Zone</span>
-              <span className="text-white font-bold block mt-0.5 truncate">৳{item.entryLow.toFixed(1)}-{item.entryHigh.toFixed(1)}</span>
+              <span className="text-white font-bold block mt-0.5 truncate">
+                {item.entryLow !== null && item.entryLow !== undefined && item.entryHigh !== null && item.entryHigh !== undefined
+                  ? `৳${item.entryLow.toFixed(1)}-${item.entryHigh.toFixed(1)}`
+                  : '—'}
+              </span>
             </div>
             <div>
               <span className="text-text-secondary uppercase block text-[9px]">Stop Loss</span>
-              <span className="text-[#DA3633] font-bold block mt-0.5">৳{item.stopLoss.toFixed(1)}</span>
+              <span className="text-[#DA3633] font-bold block mt-0.5">
+                {item.stopLoss !== null && item.stopLoss !== undefined ? `৳${item.stopLoss.toFixed(1)}` : '—'}
+              </span>
             </div>
             <div>
               <span className="text-text-secondary uppercase block text-[9px]">Target 1</span>
-              <span className="text-[#238636] font-bold block mt-0.5">৳{item.target1.toFixed(1)}</span>
+              <span className="text-[#238636] font-bold block mt-0.5">
+                {item.target1 !== null && item.target1 !== undefined ? `৳${item.target1.toFixed(1)}` : '—'}
+              </span>
             </div>
           </div>
         </div>
@@ -1087,26 +1116,38 @@ export function SignalAnalysisDrawer({ id, onClose }: SignalAnalysisDrawerProps)
                   </div>
                   <div className="flex justify-between border-b border-border-dark/20 pb-1">
                     <span className="text-text-secondary">Preferred Entry Range:</span>
-                    <span className="text-white font-bold">৳{item.entryLow.toFixed(1)} - ৳{item.entryHigh.toFixed(1)}</span>
+                    <span className="text-white font-bold">
+                      {item.entryLow !== null && item.entryLow !== undefined && item.entryHigh !== null && item.entryHigh !== undefined
+                        ? `৳${item.entryLow.toFixed(1)} - ৳${item.entryHigh.toFixed(1)}`
+                        : '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between border-b border-border-dark/20 pb-1">
                     <span className="text-text-secondary">Conservative Stop Loss:</span>
-                    <span className="text-[#DA3633] font-bold">৳{item.stopLoss.toFixed(1)}</span>
+                    <span className="text-[#DA3633] font-bold">
+                      {item.stopLoss !== null && item.stopLoss !== undefined ? `৳${item.stopLoss.toFixed(1)}` : '—'}
+                    </span>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between border-b border-border-dark/20 pb-1">
                     <span className="text-text-secondary">Target Objective 1:</span>
-                    <span className="text-[#238636] font-bold">৳{item.target1.toFixed(1)}</span>
+                    <span className="text-[#238636] font-bold">
+                      {item.target1 !== null && item.target1 !== undefined ? `৳${item.target1.toFixed(1)}` : '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between border-b border-border-dark/20 pb-1">
                     <span className="text-text-secondary">Target Objective 2:</span>
-                    <span className="text-[#238636] font-bold">৳{item.target2.toFixed(1)}</span>
+                    <span className="text-[#238636] font-bold">
+                      {item.target2 !== null && item.target2 !== undefined ? `৳${item.target2.toFixed(1)}` : '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between border-b border-border-dark/20 pb-1">
                     <span className="text-text-secondary">Risk / Reward (R:R):</span>
-                    <span className="text-[#58A6FF] font-black">{item.riskReward.toFixed(2)}x</span>
+                    <span className="text-[#58A6FF] font-black">
+                      {item.riskReward !== null && item.riskReward !== undefined ? `${item.riskReward.toFixed(2)}x` : '—'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1132,11 +1173,15 @@ export function SignalAnalysisDrawer({ id, onClose }: SignalAnalysisDrawerProps)
                 </div>
                 <div className="flex justify-between border-b border-border-dark/20 pb-1">
                   <span className="text-text-secondary">Identified Support Shelf:</span>
-                  <span className="text-white">৳{item.support.toFixed(2)}</span>
+                  <span className="text-white">
+                    {item.support !== null && item.support !== undefined ? `৳${item.support.toFixed(2)}` : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-border-dark/20 pb-1">
                   <span className="text-text-secondary">Respective Resistance Shelf:</span>
-                  <span className="text-white">৳{item.resistance.toFixed(2)}</span>
+                  <span className="text-white">
+                    {item.resistance !== null && item.resistance !== undefined ? `৳${item.resistance.toFixed(2)}` : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-border-dark/20 pb-1">
                   <span className="text-text-secondary">Average Daily Volume:</span>

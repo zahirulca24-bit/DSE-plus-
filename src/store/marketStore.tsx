@@ -168,10 +168,7 @@ function mapBackendCandidate(
 ): Candidate {
   const price = Number(item.latest_close ?? 0);
   const trend = item.trend || 'NEUTRAL';
-  const riskReward = Number(item.risk_reward ?? 0);
-  const displayRisk = price > 0 ? price * 0.03 : 1;
-  const target1 = price > 0 ? price + displayRisk * Math.max(riskReward || 1, 1) : 0;
-  const stopLoss = price > 0 ? Math.max(price - displayRisk, 0) : 0;
+  const riskReward = item.risk_reward !== undefined && item.risk_reward !== null ? Number(item.risk_reward) : null;
 
   return {
     id: `api-${source}-${item.symbol}-${index}`,
@@ -180,7 +177,7 @@ function mapBackendCandidate(
     company: item.company || `${item.symbol} — company metadata pending`,
     sector: item.sector || 'Metadata Pending',
     setup: item.setup || 'Scanner Setup',
-    side: trend === 'BEARISH' ? 'SHORT' : 'LONG',
+    side: item.side ?? null,
     grade: item.grade,
     score: Number(item.score ?? 0),
     price,
@@ -192,15 +189,15 @@ function mapBackendCandidate(
     trend,
     emaAlignment: trend,
     entryStatus: mapEntryStatus(item.entry_status),
-    entryLow: price,
-    entryHigh: price,
-    stopLoss,
-    target1,
-    target2: target1,
-    target3: target1,
+    entryLow: item.entry_low ?? null,
+    entryHigh: item.entry_high ?? null,
+    stopLoss: item.stop_loss ?? null,
+    target1: item.target1 ?? null,
+    target2: item.target2 ?? null,
+    target3: item.target3 ?? null,
     riskReward,
-    support: stopLoss,
-    resistance: target1,
+    support: item.support ?? null,
+    resistance: item.resistance ?? null,
     qualificationReasons: item.reasons || [],
     missingConditions: item.warnings || [],
     rejectionReasons: item.signal_status === 'rejected' ? item.warnings || ['Rejected by backend scanner rule.'] : [],
