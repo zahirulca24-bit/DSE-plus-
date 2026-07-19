@@ -9,7 +9,7 @@ export interface Candidate {
   grade: 'A+' | 'A' | 'B+' | 'REJECT';
   score: number;
   price: number;
-  changePercent: number;
+  changePercent: number | null | undefined;
   relativeVolume: number;
   averageVolume: string;
   turnover: string;
