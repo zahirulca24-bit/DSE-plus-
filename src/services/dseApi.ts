@@ -26,6 +26,10 @@ function fileForm(file: File): FormData {
   return formData;
 }
 
+const storageStatus = () => apiGet<BlobStatusResponse>(API_ENDPOINTS.storageStatus, 60000);
+const importOhlcToLocal = (file: File) =>
+  apiPostForm<BlobImportResponse>(API_ENDPOINTS.importOhlcToLocal, fileForm(file), 300000);
+
 export const dseApi = {
   health: () => apiGet<ApiHealthResponse>(API_ENDPOINTS.health, 60000),
   status: () => apiGet<DseStatusResponse>(API_ENDPOINTS.status, 60000),
@@ -33,12 +37,11 @@ export const dseApi = {
   scannerStatus: () => apiGet<Record<string, unknown>>(API_ENDPOINTS.scannerStatus, 60000),
   scannerLatest: async () => normalizeScannerResult(await apiGet<DseScannerLatestResponse>(API_ENDPOINTS.scannerLatest, 60000)),
   scannerRun: async () => normalizeScannerResult(await apiPost<DseScannerLatestResponse>(API_ENDPOINTS.scannerRun, 120000)),
-  storageStatus: () => apiGet<BlobStatusResponse>(API_ENDPOINTS.storageStatus, 60000),
+  storageStatus,
   dataStatus: () => apiGet<DataStatusResponse>(API_ENDPOINTS.dataStatus, 60000),
   previewOhlc: (file: File) =>
     apiPostForm<OhlcPreviewResponse>(API_ENDPOINTS.previewOhlc, fileForm(file), 120000),
-  importOhlcToLocal: (file: File) =>
-    apiPostForm<BlobImportResponse>(API_ENDPOINTS.importOhlcToLocal, fileForm(file), 300000),
+  importOhlcToLocal,
   databaseStatus: () => apiGet<DatabaseStatusResponse>(API_ENDPOINTS.databaseStatus, 60000),
   initializeDatabase: () => apiPost<DatabaseInitResponse>(API_ENDPOINTS.initializeDatabase, 60000),
   dataSource: () => apiGet<DataSourceResponse>(API_ENDPOINTS.dataSource, 60000),
@@ -57,4 +60,9 @@ export const dseApi = {
     apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorStatus(jobId), 60000),
   collectorHistory: (limit = 20) =>
     apiGet<CollectorHistoryResponse>(API_ENDPOINTS.collectorHistory(limit), 60000),
+
+  // Temporary compatibility aliases for existing pages. Remove in Step 2 after page migration.
+  driveStatus: storageStatus,
+  importOhlcToBlob: importOhlcToLocal,
+  importOhlcToDrive: importOhlcToLocal,
 };
