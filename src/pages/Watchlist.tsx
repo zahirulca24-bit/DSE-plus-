@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Trash2 } from 'lucide-react';
 import PageContainer from '../components/PageContainer';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
@@ -15,14 +15,19 @@ export default function Watchlist() {
     scannerDataSource,
     signalDataSource,
     scanTimestamp,
+    backendConnectionStatus,
+    backendMessage,
+    refreshBackendData,
   } = useMarket();
 
   const available = scannerCandidates.filter((item) => !watchlistSymbols.includes(item.symbol));
   const rows = watchlistSymbols.map((symbol) => ({
     symbol,
-    candidate: scannerCandidates.find((item) => item.symbol === symbol) || signalCandidates.find((item) => item.symbol === symbol),
+    candidate: scannerCandidates.find((item) => item.symbol === symbol)
+      || signalCandidates.find((item) => item.symbol === symbol),
   }));
-  const realDataReady = scannerDataSource !== 'none' || signalDataSource !== 'none';
+  const verifiedDataReady = scannerDataSource !== 'none' || signalDataSource !== 'none';
+  const backendReady = backendConnectionStatus === 'Connected';
 
   return (
     <PageContainer id="watchlist-route">
@@ -30,10 +35,16 @@ export default function Watchlist() {
         title="Market Watchlist"
         description="Track symbols from verified backend scanner data. No demo symbols or simulated prices are preloaded."
         breadcrumbs={[{ label: 'Watchlist', path: '/watchlist' }]}
-        action={<StatusBadge status={realDataReady ? 'positive' : 'warning'} label={realDataReady ? 'REAL DATA' : 'NO LIVE DATA'} />}
+        action={<StatusBadge status={verifiedDataReady ? 'positive' : 'warning'} label={verifiedDataReady ? 'VERIFIED DATA' : 'NO VERIFIED DATA'} />}
       />
 
       <div className="space-y-6">
+        {!backendReady && (
+          <div className="rounded-xl border border-[#DA3633]/30 bg-[#DA3633]/5 p-4 text-sm text-[#FF7B72]">
+            {backendMessage} Watchlist prices and scanner fields were not fabricated.
+          </div>
+        )}
+
         <div className="rounded-xl border border-border-dark bg-[#0D1117] p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="text-xs text-text-secondary">
@@ -41,6 +52,14 @@ export default function Watchlist() {
               <div className="mt-1">Last scanner update: <span className="text-white">{scanTimestamp}</span></div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void refreshBackendData()}
+                disabled={backendConnectionStatus === 'Checking'}
+                className="inline-flex items-center gap-1 rounded-md border border-border-dark bg-[#161B22] px-3 py-2 text-xs font-mono font-bold text-white disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${backendConnectionStatus === 'Checking' ? 'animate-spin' : ''}`} />Refresh
+              </button>
               {available.slice(0, 8).map((item) => (
                 <button
                   key={item.symbol}
@@ -62,7 +81,7 @@ export default function Watchlist() {
           <div className="rounded-xl border border-dashed border-border-dark bg-[#0D1117]/40 p-12 text-center">
             <h3 className="text-sm font-bold text-white">No watchlist symbols</h3>
             <p className="mt-2 text-xs text-text-secondary">
-              {realDataReady ? 'Add symbols from the latest backend scanner results.' : 'Connect the Drive-backed dataset and run the backend scanner first.'}
+              {verifiedDataReady ? 'Add symbols from the latest backend scanner results.' : 'Load verified DSE data and run the backend scanner first.'}
             </p>
           </div>
         ) : (
@@ -77,7 +96,7 @@ export default function Watchlist() {
                     <td className="px-4 py-3 font-bold text-white">{symbol}</td>
                     <td className="px-4 py-3 text-white">{candidate?.grade || '—'}</td>
                     <td className="px-4 py-3 text-white">{candidate?.price ? `৳${candidate.price.toFixed(2)}` : '—'}</td>
-                    <td className="px-4 py-3 text-text-secondary">{candidate?.setup || 'Awaiting scanner data'}</td>
+                    <td className="px-4 py-3 text-text-secondary">{candidate?.setup || 'Awaiting verified scanner data'}</td>
                     <td className="px-4 py-3 text-text-secondary">{candidate?.entryStatus || '—'}</td>
                     <td className="px-4 py-3 text-right"><button type="button" onClick={() => removeFromWatchlist(symbol)} className="inline-flex items-center gap-1 text-[#DA3633]"><Trash2 className="h-3.5 w-3.5" />Remove</button></td>
                   </tr>
@@ -88,7 +107,7 @@ export default function Watchlist() {
         )}
 
         <div className="rounded-lg border border-[#58A6FF]/20 bg-[#58A6FF]/5 p-4 text-xs text-[#58A6FF]">
-          Watchlist membership is currently browser-local. Prices and scanner fields are shown only when supplied by the real backend data source.
+          Watchlist membership is browser-local. Prices, grades, and scanner fields appear only when returned by the verified backend source.
         </div>
       </div>
     </PageContainer>
