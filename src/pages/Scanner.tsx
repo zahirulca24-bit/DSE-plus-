@@ -22,6 +22,7 @@ export default function Scanner() {
     setSelectedScannerCandidateId,
     scannerDataSource,
     backendConnectionStatus,
+    backendMessage,
     scannerUniverseCount,
     scannerEligibleCount,
   } = useMarket();
@@ -31,8 +32,8 @@ export default function Scanner() {
   const sourceLabel = scannerDataSource === 'database'
     ? 'DATABASE DATA'
     : scannerDataSource === 'local_csv'
-      ? 'GOOGLE DRIVE-BACKED DATA'
-      : 'NO LIVE DATA';
+      ? 'VERIFIED LOCAL CSV'
+      : 'NO VERIFIED DATA';
 
   const sectors = Array.from(new Set(scannerCandidates.map((c) => c.sector))).filter(Boolean);
   const setups = Array.from(new Set(scannerCandidates.map((c) => c.setup))).filter(Boolean);
@@ -95,6 +96,12 @@ export default function Scanner() {
         </div>
       </div>
 
+      {backendConnectionStatus !== 'Connected' && (
+        <div className="mb-6 rounded-lg border border-[#DA3633]/30 bg-[#DA3633]/5 p-4 text-sm text-[#FF7B72]">
+          {backendMessage} Scanner data was cleared and no fallback candidates were loaded.
+        </div>
+      )}
+
       <div className="mb-6 flex flex-col justify-between gap-2 rounded-lg border border-border-dark bg-[#161B22]/40 p-3 font-mono text-xs sm:flex-row sm:items-center">
         <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#58A6FF]" /><span className="text-text-secondary">SCAN ENGINE TELEMETRY:</span><span className="font-bold text-white">{sourceLabel}</span></div>
         <div className="text-text-secondary">Last Scan: <span className="font-mono font-semibold text-white">{scanTimestamp}</span></div>
@@ -102,11 +109,11 @@ export default function Scanner() {
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <ScannerSummaryCard label="Universe" value={scannerUniverseCount} icon={<Globe className="h-3.5 w-3.5 text-[#58A6FF]" />} context="Backend scanned symbols" />
-        <ScannerSummaryCard label="Eligible Stocks" value={scannerEligibleCount} icon={<Layers className="h-3.5 w-3.5 text-[#58A6FF]" />} context="Backend eligible symbols" />
-        <ScannerSummaryCard label="A+ Grade" value={aPlusCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#238636]">A+</span>} context="A+ Highly Qualified" />
-        <ScannerSummaryCard label="A Grade" value={aCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#58A6FF]">A</span>} context="A Qualified" />
-        <ScannerSummaryCard label="B+ Watch" value={bPlusCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#D29922]">B+</span>} context="B+ Watch Setups" />
-        <ScannerSummaryCard label="Rejected" value={rejectCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#DA3633]">X</span>} context="Under 85 Score" />
+        <ScannerSummaryCard label="Eligible Stocks" value={scannerEligibleCount} icon={<Layers className="h-3.5 w-3.5 text-[#58A6FF]" />} context="Minimum 60 verified rows" />
+        <ScannerSummaryCard label="A+ Grade" value={aPlusCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#238636]">A+</span>} context="95–100 Qualified" />
+        <ScannerSummaryCard label="A Grade" value={aCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#58A6FF]">A</span>} context="90–94 Qualified" />
+        <ScannerSummaryCard label="B+ Watch" value={bPlusCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#D29922]">B+</span>} context="85–89 Watch Only" />
+        <ScannerSummaryCard label="Rejected" value={rejectCount} icon={<span className="font-mono text-[10px] font-extrabold text-[#DA3633]">X</span>} context="Under 85 / Gate Failed" />
       </div>
 
       <div className="mb-6"><ScannerFilterPanel isCollapsed={isFilterCollapsed} setIsCollapsed={setIsFilterCollapsed} sectors={sectors} setups={setups} /></div>

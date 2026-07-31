@@ -41,6 +41,9 @@ export interface DseBackendCandidate {
   rsi14?: number;
   volume_ratio?: number;
   risk_reward?: number;
+  qualification_passed?: boolean;
+  qualification_failures?: string[];
+  entry_distance_percent?: number | null;
   reasons?: string[];
   warnings?: string[];
   data_mode?: string;
@@ -121,14 +124,14 @@ export interface OhlcPreviewResponse {
 export interface BlobStatusResponse {
   configured: boolean;
   connected: boolean;
-  storage_type: 'vercel_blob';
-  master_pathname: string;
+  storage_type?: string;
+  master_pathname?: string;
   message: string;
 }
 
 export interface BlobImportResponse {
   ok: boolean;
-  data_source: 'vercel_blob';
+  data_source: 'local_csv' | 'database';
   inserted_rows: number;
   updated_rows: number;
   invalid_rows: number;
@@ -136,12 +139,10 @@ export interface BlobImportResponse {
   rows_count: number;
   earliest_trade_date: string | null;
   latest_trade_date: string | null;
-  master_pathname: string;
+  master_pathname?: string;
   message: string;
 }
 
-// Temporary compatibility names keep the existing Data Import component stable
-// while all requests are redirected to Vercel Blob endpoints.
 export interface DriveStatusResponse extends BlobStatusResponse {
   folder_name?: string | null;
   master_filename?: string;
@@ -186,10 +187,11 @@ export interface DataStatusResponse {
 }
 
 export interface DataSourceResponse {
-  preferred_source: 'database' | 'local_csv' | 'demo';
+  preferred_source: 'database' | 'local_csv' | 'none';
+  market_data_available?: boolean;
   database_available: boolean;
   local_csv_available: boolean;
-  fallback_order: Array<'database' | 'local_csv' | 'demo'>;
+  fallback_order: Array<'database' | 'local_csv'>;
 }
 
 export interface DataAuditResponse {
