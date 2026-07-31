@@ -1,21 +1,37 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Cloud, Database, RefreshCw, ShieldAlert } from 'lucide-react';
+import { BarChart3, Database, RefreshCw, Server, ShieldAlert } from 'lucide-react';
 import PageContainer from '../components/PageContainer';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { dseApi } from '../services/dseApi';
-import { DataStatusResponse, DriveStatusResponse } from '../types/api';
+import { DataSourceResponse, DataStatusResponse } from '../types/api';
+
+function sourceLabel(source?: string): string {
+  if (source === 'database') return 'Cloud SQL / Database';
+  if (source === 'local_csv') return 'Verified Local CSV';
+  return 'No verified source';
+}
 
 export default function Backtest() {
-  const [driveStatus, setDriveStatus] = useState<DriveStatusResponse | null>(null);
+  const [dataSource, setDataSource] = useState<DataSourceResponse | null>(null);
   const [dataStatus, setDataStatus] = useState<DataStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [drive, data] = await Promise.all([dseApi.driveStatus(), dseApi.dataStatus()]);
-    setDriveStatus(drive.ok ? drive.data : null);
+    setError(null);
+
+    const [source, data] = await Promise.all([
+      dseApi.dataSource(),
+      dseApi.dataStatus(),
+    ]);
+
+    setDataSource(source.ok ? source.data : null);
     setDataStatus(data.ok ? data.data : null);
+
+    const failure = [source, data].find((result) => !result.ok);
+    if (failure) setError(failure.error || 'Backtest data readiness check failed.');
     setLoading(false);
   }, []);
 
@@ -23,14 +39,17 @@ export default function Backtest() {
     void refresh();
   }, [refresh]);
 
-  const driveReady = Boolean(driveStatus?.connected);
-  const dataReady = Boolean(dataStatus?.data_available && dataStatus.rows_count);
+  const dataReady = Boolean(
+    dataStatus?.data_available
+    && dataStatus.rows_count
+    && dataSource?.preferred_source !== 'none',
+  );
 
   return (
     <PageContainer id="backtest-route-main">
       <PageHeader
         title="Backtesting Suite"
-        description="Historical strategy testing will run only on verified DSE OHLC data from the Google Drive-backed storage pipeline."
+        description="Historical strategy testing will use only verified DSE OHLC data selected by the backend source contract."
         breadcrumbs={[{ label: 'Backtest', path: '/backtest' }]}
         action={<StatusBadge status={dataReady ? 'warning' : 'negative'} label={dataReady ? 'ENGINE NOT CONNECTED' : 'DATA NOT READY'} />}
       />
@@ -48,8 +67,14 @@ export default function Backtest() {
           </button>
         </div>
 
+        {error && (
+          <div className="rounded-xl border border-[#DA3633]/30 bg-[#DA3633]/5 p-4 text-sm text-[#FF7B72]">
+            {error} No fallback or fabricated backtest result was loaded.
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatusCard icon={<Cloud className="h-4 w-4" />} label="Google Drive" value={driveReady ? 'Connected' : 'Not Connected'} />
+          <StatusCard icon={<Server className="h-4 w-4" />} label="Verified Source" value={sourceLabel(dataSource?.preferred_source)} />
           <StatusCard icon={<Database className="h-4 w-4" />} label="Historical Rows" value={dataStatus?.rows_count?.toLocaleString('en-US') || '—'} />
           <StatusCard icon={<BarChart3 className="h-4 w-4" />} label="Latest OHLC" value={dataStatus?.latest_trade_date || '—'} />
         </div>
@@ -58,9 +83,9 @@ export default function Backtest() {
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#D29922]" />
             <div>
-              <h2 className="text-sm font-bold text-white">Real backtest engine required</h2>
+              <h2 className="text-sm font-bold text-white">Backend backtest engine required</h2>
               <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-                Previous demo/pre-computed backtest results have been disabled. This page will not show win rate, P/L, drawdown, trade logs, or equity curves until the Python backend backtest engine reads the verified Google Drive-backed OHLC dataset and returns calculated results.
+                Demo and pre-computed results remain disabled. Win rate, P/L, drawdown, trade logs, and equity curves will appear only after the backend calculates them from the verified active OHLC source.
               </p>
             </div>
           </div>
@@ -69,7 +94,7 @@ export default function Backtest() {
         <div className="rounded-xl border border-border-dark bg-[#0D1117] p-6">
           <h3 className="text-sm font-bold text-white">Locked production flow</h3>
           <div className="mt-4 font-mono text-xs leading-7 text-text-secondary">
-            App Data Import → Backend validation → Google Drive master CSV → Backend cache → Python backtest engine → Verified results
+            Verified import → backend validation → database-first source selection → backtest engine → calculated results
           </div>
         </div>
       </div>
