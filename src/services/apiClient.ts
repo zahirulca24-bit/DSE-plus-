@@ -1,16 +1,26 @@
-import { env, hasDseApiBaseUrl } from '../config/env';
+import { env, envStatus } from '../config/env';
 import { ApiResult } from '../types/api';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const RETRYABLE_METHODS = new Set(['GET']);
+
+function extractError(data: unknown, status: number): string {
+  if (data && typeof data === 'object') {
+    const payload = data as Record<string, unknown>;
+    for (const key of ['detail', 'message', 'error']) {
+      const value = payload[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+  return `Backend request failed with HTTP ${status}.`;
+}
 
 async function performRequest<T>(path: string, init: RequestInit, timeoutMs: number): Promise<ApiResult<T>> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const base = env.dseApiBaseUrl!.replace(/\/$/, '');
-    const response = await fetch(`${base}${path}`, {
+    const response = await fetch(`${env.dseApiBaseUrl}${path}`, {
       ...init,
       signal: controller.signal,
       cache: 'no-store',
@@ -27,21 +37,20 @@ async function performRequest<T>(path: string, init: RequestInit, timeoutMs: num
       }
     }
 
-    let error: string | null = null;
-    if (!response.ok) {
-      const detail = data && typeof data === 'object' && 'detail' in data
-        ? String((data as { detail?: unknown }).detail || '')
-        : '';
-      error = detail || `HTTP ${response.status}`;
-    }
-
-    return { ok: response.ok, status: response.status, data, error };
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+      error: response.ok ? null : extractError(data, response.status),
+    };
   } catch (error) {
     const message = error instanceof DOMException && error.name === 'AbortError'
-      ? 'Request timed out while the backend was starting. Please retry.'
-      : error instanceof Error
-        ? error.message
-        : 'Unknown API error.';
+      ? 'Backend request timed out. Please retry after the service is ready.'
+      : error instanceof TypeError
+        ? 'Backend is unreachable or blocked by CORS.'
+        : error instanceof Error
+          ? error.message
+          : 'Unknown API error.';
     return { ok: false, status: null, data: null, error: message };
   } finally {
     window.clearTimeout(timeout);
@@ -49,8 +58,8 @@ async function performRequest<T>(path: string, init: RequestInit, timeoutMs: num
 }
 
 async function apiRequest<T>(path: string, init: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiResult<T>> {
-  if (!hasDseApiBaseUrl || !env.dseApiBaseUrl) {
-    return { ok: false, status: null, data: null, error: 'VITE_DSE_API_BASE_URL is not configured.' };
+  if (!envStatus.productionSafe || !env.dseApiBaseUrl) {
+    return { ok: false, status: null, data: null, error: envStatus.error || 'Backend URL is not configured.' };
   }
 
   const first = await performRequest<T>(path, init, timeoutMs);
