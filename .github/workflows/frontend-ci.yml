@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: API contract tests
+        run: npm test
+
       - name: TypeScript check
         run: |
           set -o pipefail
