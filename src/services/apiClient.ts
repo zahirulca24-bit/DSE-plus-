@@ -1,19 +1,9 @@
 import { env, envStatus } from '../config/env';
 import { ApiResult } from '../types/api';
+import { extractApiError } from './apiError';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const RETRYABLE_METHODS = new Set(['GET']);
-
-function extractError(data: unknown, status: number): string {
-  if (data && typeof data === 'object') {
-    const payload = data as Record<string, unknown>;
-    for (const key of ['detail', 'message', 'error']) {
-      const value = payload[key];
-      if (typeof value === 'string' && value.trim()) return value.trim();
-    }
-  }
-  return `Backend request failed with HTTP ${status}.`;
-}
 
 async function performRequest<T>(path: string, init: RequestInit, timeoutMs: number): Promise<ApiResult<T>> {
   const controller = new AbortController();
@@ -41,7 +31,7 @@ async function performRequest<T>(path: string, init: RequestInit, timeoutMs: num
       ok: response.ok,
       status: response.status,
       data,
-      error: response.ok ? null : extractError(data, response.status),
+      error: response.ok ? null : extractApiError(data, response.status),
     };
   } catch (error) {
     const message = error instanceof DOMException && error.name === 'AbortError'
