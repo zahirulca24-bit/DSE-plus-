@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPostForm, apiPostJson } from './apiClient';
+import { API_ENDPOINTS } from './apiEndpoints';
 import { normalizeScannerResult, normalizeSignalsResult } from './apiNormalization';
 import {
   ApiHealthResponse,
@@ -25,38 +26,43 @@ function fileForm(file: File): FormData {
   return formData;
 }
 
+const storageStatus = () => apiGet<BlobStatusResponse>(API_ENDPOINTS.storageStatus, 60000);
+const importOhlcToLocal = (file: File) =>
+  apiPostForm<BlobImportResponse>(API_ENDPOINTS.importOhlcToLocal, fileForm(file), 300000);
+
 export const dseApi = {
-  health: () => apiGet<ApiHealthResponse>('/health', 60000),
-  status: () => apiGet<DseStatusResponse>('/status', 60000),
-  signals: async () => normalizeSignalsResult(await apiGet<DseSignalsResponse>('/signals', 60000)),
-  scannerStatus: () => apiGet<Record<string, unknown>>('/scanner/status', 60000),
-  scannerLatest: async () => normalizeScannerResult(await apiGet<DseScannerLatestResponse>('/scanner/latest', 60000)),
-  scannerRun: async () => normalizeScannerResult(await apiPost<DseScannerLatestResponse>('/scanner/run', 120000)),
-  storageStatus: () => apiGet<BlobStatusResponse>('/storage/status', 60000),
-  driveStatus: () => apiGet<BlobStatusResponse>('/storage/status', 60000),
-  dataStatus: () => apiGet<DataStatusResponse>('/data/status', 60000),
+  health: () => apiGet<ApiHealthResponse>(API_ENDPOINTS.health, 60000),
+  status: () => apiGet<DseStatusResponse>(API_ENDPOINTS.status, 60000),
+  signals: async () => normalizeSignalsResult(await apiGet<DseSignalsResponse>(API_ENDPOINTS.signals, 60000)),
+  scannerStatus: () => apiGet<Record<string, unknown>>(API_ENDPOINTS.scannerStatus, 60000),
+  scannerLatest: async () => normalizeScannerResult(await apiGet<DseScannerLatestResponse>(API_ENDPOINTS.scannerLatest, 60000)),
+  scannerRun: async () => normalizeScannerResult(await apiPost<DseScannerLatestResponse>(API_ENDPOINTS.scannerRun, 120000)),
+  storageStatus,
+  dataStatus: () => apiGet<DataStatusResponse>(API_ENDPOINTS.dataStatus, 60000),
   previewOhlc: (file: File) =>
-    apiPostForm<OhlcPreviewResponse>('/data/ohlc/preview', fileForm(file), 120000),
-  importOhlcToBlob: (file: File) =>
-    apiPostForm<BlobImportResponse>('/data/ohlc/import-blob', fileForm(file), 300000),
-  importOhlcToDrive: (file: File) =>
-    apiPostForm<BlobImportResponse>('/data/ohlc/import-blob', fileForm(file), 300000),
-  databaseStatus: () => apiGet<DatabaseStatusResponse>('/db/status', 60000),
-  initializeDatabase: () => apiPost<DatabaseInitResponse>('/db/init', 60000),
-  dataSource: () => apiGet<DataSourceResponse>('/data/source', 60000),
-  dataAudit: () => apiGet<DataAuditResponse>('/data/audit', 120000),
+    apiPostForm<OhlcPreviewResponse>(API_ENDPOINTS.previewOhlc, fileForm(file), 120000),
+  importOhlcToLocal,
+  databaseStatus: () => apiGet<DatabaseStatusResponse>(API_ENDPOINTS.databaseStatus, 60000),
+  initializeDatabase: () => apiPost<DatabaseInitResponse>(API_ENDPOINTS.initializeDatabase, 60000),
+  dataSource: () => apiGet<DataSourceResponse>(API_ENDPOINTS.dataSource, 60000),
+  dataAudit: () => apiGet<DataAuditResponse>(API_ENDPOINTS.dataAudit, 120000),
   importOhlcToDatabase: (file: File) =>
-    apiPostForm<DatabaseImportResponse>('/data/ohlc/import-db', fileForm(file), 300000),
+    apiPostForm<DatabaseImportResponse>(API_ENDPOINTS.importOhlcToDatabase, fileForm(file), 300000),
   collectorRun: (request: CollectorRunRequest, token: string) =>
     apiPostJson<CollectorRunResponse, CollectorRunRequest>(
-      '/collector/run',
+      API_ENDPOINTS.collectorRun,
       request,
       { 'X-Collector-Token': token },
       60000,
     ),
-  collectorLatest: () => apiGet<CollectorRunResponse>('/collector/latest', 60000),
+  collectorLatest: () => apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorLatest, 60000),
   collectorStatus: (jobId: string) =>
-    apiGet<CollectorRunResponse>(`/collector/status/${encodeURIComponent(jobId)}`, 60000),
+    apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorStatus(jobId), 60000),
   collectorHistory: (limit = 20) =>
-    apiGet<CollectorHistoryResponse>(`/collector/history?limit=${limit}`, 60000),
+    apiGet<CollectorHistoryResponse>(API_ENDPOINTS.collectorHistory(limit), 60000),
+
+  // Temporary compatibility aliases for existing pages. Remove in Step 2 after page migration.
+  driveStatus: storageStatus,
+  importOhlcToBlob: importOhlcToLocal,
+  importOhlcToDrive: importOhlcToLocal,
 };
