@@ -59,7 +59,7 @@ export const dseApi = {
       120000,
     ),
   collectorStatus: () =>
-    apiGet<ProductionCollectorStatusResponse>(API_ENDPOINTS.collectorStatus, 60000),
+    apiGet<ProductionCollectorStatusResponse>(API_ENDPOINTS.collectorProductionStatus, 60000),
   collectorStart: (token: string) =>
     apiPostJson<ProductionCollectorStatusResponse, Record<string, never>>(
       API_ENDPOINTS.collectorStart,
@@ -76,7 +76,7 @@ export const dseApi = {
     ),
   collectorLatest: () => apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorLatest, 60000),
   collectorJobStatus: (jobId: string) =>
-    apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorJobStatus(jobId), 60000),
+    apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorStatus(jobId), 60000),
   collectorHistory: (limit = 20) =>
     apiGet<CollectorHistoryResponse>(API_ENDPOINTS.collectorHistory(limit), 60000),
 
