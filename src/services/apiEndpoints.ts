@@ -9,6 +9,7 @@ export const API_ENDPOINTS = Object.freeze({
   dataStatus: '/data/status',
   dataSource: '/data/source',
   dataAudit: '/data/audit',
+  dataImport: '/data/import',
   previewOhlc: '/data/ohlc/preview',
   importOhlcToLocal: '/data/ohlc/import-blob',
   importOhlcToDatabase: '/data/ohlc/import-db',
