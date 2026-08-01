@@ -15,10 +15,10 @@ export const API_ENDPOINTS = Object.freeze({
   databaseStatus: '/db/status',
   initializeDatabase: '/db/init',
   collectorRun: '/collector/run',
-  collectorStatus: '/collector/status',
+  collectorProductionStatus: '/collector/status',
   collectorStart: '/collector/start',
   collectorStop: '/collector/stop',
   collectorLatest: '/collector/latest',
-  collectorJobStatus: (jobId: string) => `/collector/status/${encodeURIComponent(jobId)}`,
+  collectorStatus: (jobId: string) => `/collector/status/${encodeURIComponent(jobId)}`,
   collectorHistory: (limit: number) => `/collector/history?limit=${limit}`,
 });
