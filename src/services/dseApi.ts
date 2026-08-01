@@ -20,6 +20,7 @@ import {
   OhlcPreviewResponse,
 } from '../types/api';
 import { ProductionCollectorStatusResponse } from '../types/collector';
+import { ProductionDataImportResponse } from '../types/dataImport';
 
 function fileForm(file: File): FormData {
   const formData = new FormData();
@@ -30,7 +31,6 @@ function fileForm(file: File): FormData {
 const storageStatus = () => apiGet<BlobStatusResponse>(API_ENDPOINTS.storageStatus, 60000);
 const importOhlcToLocal = (file: File) =>
   apiPostForm<BlobImportResponse>(API_ENDPOINTS.importOhlcToLocal, fileForm(file), 300000);
-
 const adminHeaders = (token: string) => ({ 'X-Admin-Token': token });
 
 export const dseApi = {
@@ -42,8 +42,9 @@ export const dseApi = {
   scannerRun: async () => normalizeScannerResult(await apiPost<DseScannerLatestResponse>(API_ENDPOINTS.scannerRun, 120000)),
   storageStatus,
   dataStatus: () => apiGet<DataStatusResponse>(API_ENDPOINTS.dataStatus, 60000),
-  previewOhlc: (file: File) =>
-    apiPostForm<OhlcPreviewResponse>(API_ENDPOINTS.previewOhlc, fileForm(file), 120000),
+  previewOhlc: (file: File) => apiPostForm<OhlcPreviewResponse>(API_ENDPOINTS.previewOhlc, fileForm(file), 120000),
+  importProductionData: (file: File, token: string) =>
+    apiPostForm<ProductionDataImportResponse>(API_ENDPOINTS.dataImport, fileForm(file), 300000, adminHeaders(token)),
   importOhlcToLocal,
   databaseStatus: () => apiGet<DatabaseStatusResponse>(API_ENDPOINTS.databaseStatus, 60000),
   initializeDatabase: () => apiPost<DatabaseInitResponse>(API_ENDPOINTS.initializeDatabase, 60000),
@@ -52,35 +53,15 @@ export const dseApi = {
   importOhlcToDatabase: (file: File) =>
     apiPostForm<DatabaseImportResponse>(API_ENDPOINTS.importOhlcToDatabase, fileForm(file), 300000),
   collectorRun: (request: CollectorRunRequest, token: string) =>
-    apiPostJson<ProductionCollectorStatusResponse, CollectorRunRequest>(
-      API_ENDPOINTS.collectorRun,
-      request,
-      adminHeaders(token),
-      120000,
-    ),
-  collectorStatus: () =>
-    apiGet<ProductionCollectorStatusResponse>(API_ENDPOINTS.collectorProductionStatus, 60000),
+    apiPostJson<ProductionCollectorStatusResponse, CollectorRunRequest>(API_ENDPOINTS.collectorRun, request, adminHeaders(token), 120000),
+  collectorStatus: () => apiGet<ProductionCollectorStatusResponse>(API_ENDPOINTS.collectorProductionStatus, 60000),
   collectorStart: (token: string) =>
-    apiPostJson<ProductionCollectorStatusResponse, Record<string, never>>(
-      API_ENDPOINTS.collectorStart,
-      {},
-      adminHeaders(token),
-      60000,
-    ),
+    apiPostJson<ProductionCollectorStatusResponse, Record<string, never>>(API_ENDPOINTS.collectorStart, {}, adminHeaders(token), 60000),
   collectorStop: (token: string) =>
-    apiPostJson<ProductionCollectorStatusResponse, Record<string, never>>(
-      API_ENDPOINTS.collectorStop,
-      {},
-      adminHeaders(token),
-      60000,
-    ),
+    apiPostJson<ProductionCollectorStatusResponse, Record<string, never>>(API_ENDPOINTS.collectorStop, {}, adminHeaders(token), 60000),
   collectorLatest: () => apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorLatest, 60000),
-  collectorJobStatus: (jobId: string) =>
-    apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorStatus(jobId), 60000),
-  collectorHistory: (limit = 20) =>
-    apiGet<CollectorHistoryResponse>(API_ENDPOINTS.collectorHistory(limit), 60000),
-
-  // Temporary compatibility aliases for existing pages. Remove in Step 2 after page migration.
+  collectorJobStatus: (jobId: string) => apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorStatus(jobId), 60000),
+  collectorHistory: (limit = 20) => apiGet<CollectorHistoryResponse>(API_ENDPOINTS.collectorHistory(limit), 60000),
   driveStatus: storageStatus,
   importOhlcToBlob: importOhlcToLocal,
   importOhlcToDrive: importOhlcToLocal,
