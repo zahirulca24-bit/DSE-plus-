@@ -90,12 +90,14 @@ export function apiPostJson<TResponse, TBody>(
 export function apiPostForm<TResponse>(
   path: string,
   formData: FormData,
+  headers: Record<string, string> = {},
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<ApiResult<TResponse>> {
   return apiRequest<TResponse>(
     path,
     {
       method: 'POST',
+      headers,
       body: formData,
     },
     timeoutMs,
