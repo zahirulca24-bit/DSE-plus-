@@ -19,6 +19,7 @@ import {
   DseStatusResponse,
   OhlcPreviewResponse,
 } from '../types/api';
+import { ProductionCollectorStatusResponse } from '../types/collector';
 
 function fileForm(file: File): FormData {
   const formData = new FormData();
@@ -29,6 +30,8 @@ function fileForm(file: File): FormData {
 const storageStatus = () => apiGet<BlobStatusResponse>(API_ENDPOINTS.storageStatus, 60000);
 const importOhlcToLocal = (file: File) =>
   apiPostForm<BlobImportResponse>(API_ENDPOINTS.importOhlcToLocal, fileForm(file), 300000);
+
+const adminHeaders = (token: string) => ({ 'X-Admin-Token': token });
 
 export const dseApi = {
   health: () => apiGet<ApiHealthResponse>(API_ENDPOINTS.health, 60000),
@@ -49,14 +52,30 @@ export const dseApi = {
   importOhlcToDatabase: (file: File) =>
     apiPostForm<DatabaseImportResponse>(API_ENDPOINTS.importOhlcToDatabase, fileForm(file), 300000),
   collectorRun: (request: CollectorRunRequest, token: string) =>
-    apiPostJson<CollectorRunResponse, CollectorRunRequest>(
+    apiPostJson<ProductionCollectorStatusResponse, CollectorRunRequest>(
       API_ENDPOINTS.collectorRun,
       request,
-      { 'X-Collector-Token': token },
+      adminHeaders(token),
+      120000,
+    ),
+  collectorStatus: () =>
+    apiGet<ProductionCollectorStatusResponse>(API_ENDPOINTS.collectorProductionStatus, 60000),
+  collectorStart: (token: string) =>
+    apiPostJson<ProductionCollectorStatusResponse, Record<string, never>>(
+      API_ENDPOINTS.collectorStart,
+      {},
+      adminHeaders(token),
+      60000,
+    ),
+  collectorStop: (token: string) =>
+    apiPostJson<ProductionCollectorStatusResponse, Record<string, never>>(
+      API_ENDPOINTS.collectorStop,
+      {},
+      adminHeaders(token),
       60000,
     ),
   collectorLatest: () => apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorLatest, 60000),
-  collectorStatus: (jobId: string) =>
+  collectorJobStatus: (jobId: string) =>
     apiGet<CollectorRunResponse>(API_ENDPOINTS.collectorStatus(jobId), 60000),
   collectorHistory: (limit = 20) =>
     apiGet<CollectorHistoryResponse>(API_ENDPOINTS.collectorHistory(limit), 60000),
