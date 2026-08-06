@@ -2,14 +2,14 @@ substitutions:
   _REGION: asia-south1
   _SERVICE: dse-pulse-frontend
   _REPOSITORY: cloud-run-source-deploy
-  _VITE_API_BASE_URL: https://dse-pulse-backend-621003740320.asia-south1.run.app
+  _VITE_DSE_API_BASE_URL: https://dse-pulse-backend-621003740320.asia-south1.run.app
 
 steps:
   - name: gcr.io/cloud-builders/docker
     args:
       - build
       - --build-arg
-      - VITE_API_BASE_URL=${_VITE_API_BASE_URL}
+      - VITE_DSE_API_BASE_URL=${_VITE_DSE_API_BASE_URL}
       - -t
       - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA
       - .
@@ -34,7 +34,6 @@ steps:
       - --cpu=1
       - --min-instances=0
       - --max-instances=2
-      - --set-env-vars=APP_MODE=production
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA
