@@ -6,6 +6,7 @@
 - Region: `asia-south1`
 - Service: `dse-pulse-frontend`
 - Backend: `https://dse-pulse-backend-621003740320.asia-south1.run.app`
+- Frontend build variable: `VITE_DSE_API_BASE_URL`
 
 ## One-time prerequisites
 
@@ -47,7 +48,7 @@ Run from the repository root:
 ```bash
 gcloud builds submit \
   --config=cloudbuild.frontend.yaml \
-  --substitutions=_VITE_API_BASE_URL=https://dse-pulse-backend-621003740320.asia-south1.run.app
+  --substitutions=_VITE_DSE_API_BASE_URL=https://dse-pulse-backend-621003740320.asia-south1.run.app
 ```
 
 ## Verify
