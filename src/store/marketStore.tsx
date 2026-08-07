@@ -6,6 +6,7 @@ import { WatchlistItemAlert } from '../types/watchlist';
 import { RegimeState } from '../types/marketRegime';
 import { BacktestConfig, BacktestResult } from '../types/backtest';
 import { dseApi } from '../services/dseApi';
+import { mapEntryStatus } from '../services/entryStatus';
 import { DseBackendCandidate, DseScannerLatestResponse, DseSignalsResponse } from '../types/api';
 
 interface ScannerFilters {
@@ -151,11 +152,6 @@ function formatDateTime(value?: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function mapEntryStatus(status?: string): Candidate['entryStatus'] {
-  if (status === 'READY' || status === 'NEAR' || status === 'WATCH') return status;
-  return 'WATCH';
 }
 
 function sourceFromBackend(value?: string): CandidateDataSource {
