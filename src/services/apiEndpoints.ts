@@ -4,7 +4,6 @@ export const API_ENDPOINTS = Object.freeze({
   signals: '/signals',
   scannerStatus: '/scanner/status',
   scannerLatest: '/scanner/latest',
-  scannerRun: '/scanner/run',
   storageStatus: '/storage/status',
   dataStatus: '/data/status',
   dataSource: '/data/source',

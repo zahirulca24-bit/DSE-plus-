@@ -15,11 +15,11 @@ test('API error parser rejects empty or non-string fields', () => {
   assert.equal(extractApiError(null, 404), 'Backend request failed with HTTP 404.');
 });
 
-test('core API endpoint paths remain aligned with the backend contract', () => {
+test('core browser API endpoints remain read-only for scanner execution', () => {
   assert.equal(API_ENDPOINTS.health, '/health');
   assert.equal(API_ENDPOINTS.signals, '/signals');
   assert.equal(API_ENDPOINTS.scannerLatest, '/scanner/latest');
-  assert.equal(API_ENDPOINTS.scannerRun, '/scanner/run');
+  assert.equal('scannerRun' in API_ENDPOINTS, false);
   assert.equal(API_ENDPOINTS.dataStatus, '/data/status');
   assert.equal(API_ENDPOINTS.dataSource, '/data/source');
   assert.equal(API_ENDPOINTS.databaseStatus, '/db/status');

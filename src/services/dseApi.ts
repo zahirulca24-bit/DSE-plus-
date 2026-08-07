@@ -39,7 +39,9 @@ export const dseApi = {
   signals: async () => normalizeSignalsResult(await apiGet<DseSignalsResponse>(API_ENDPOINTS.signals, 60000)),
   scannerStatus: () => apiGet<Record<string, unknown>>(API_ENDPOINTS.scannerStatus, 60000),
   scannerLatest: async () => normalizeScannerResult(await apiGet<DseScannerLatestResponse>(API_ENDPOINTS.scannerLatest, 60000)),
-  scannerRun: async () => normalizeScannerResult(await apiPost<DseScannerLatestResponse>(API_ENDPOINTS.scannerRun, 120000)),
+  // Browser UI must never execute the protected scanner route or carry an admin secret.
+  // Keep the existing store contract read-only by refreshing the latest persisted scanner result.
+  scannerRun: async () => normalizeScannerResult(await apiGet<DseScannerLatestResponse>(API_ENDPOINTS.scannerLatest, 60000)),
   storageStatus,
   dataStatus: () => apiGet<DataStatusResponse>(API_ENDPOINTS.dataStatus, 60000),
   previewOhlc: (file: File) => apiPostForm<OhlcPreviewResponse>(API_ENDPOINTS.previewOhlc, fileForm(file), 120000),
