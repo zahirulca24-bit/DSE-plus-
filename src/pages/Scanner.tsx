@@ -15,7 +15,7 @@ export default function Scanner() {
     scannerCandidates,
     scannerFilters,
     resetScannerFilters,
-    runDemoScan,
+    runDemoScan: refreshScannerResults,
     isScanning,
     scanTimestamp,
     selectedScannerCandidateId,
@@ -76,7 +76,7 @@ export default function Scanner() {
             </span>
           </div>
           <p className="max-w-2xl text-xs leading-relaxed text-text-secondary">
-            Scanner results are shown only from the connected backend using verified DSE data. No demo fallback is enabled.
+            Scanner results are shown only from the connected backend using verified DSE data. Scan execution is backend-controlled; this page only refreshes persisted results and never exposes an admin secret.
           </p>
         </div>
 
@@ -86,12 +86,12 @@ export default function Scanner() {
             <span>RESET FILTERS</span>
           </button>
           <button
-            onClick={runDemoScan}
+            onClick={refreshScannerResults}
             disabled={isScanning || backendConnectionStatus !== 'Connected'}
             className="flex cursor-pointer items-center gap-1.5 rounded border border-[#238636] bg-[#238636] px-3.5 py-1.5 font-mono text-xs font-bold text-white transition-colors hover:bg-[#2EA043] disabled:cursor-not-allowed disabled:border-border-dark disabled:bg-border-dark disabled:text-text-secondary"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isScanning ? 'animate-spin' : ''}`} />
-            <span>{isScanning ? 'SCANNING...' : 'RUN BACKEND SCAN'}</span>
+            <span>{isScanning ? 'REFRESHING...' : 'REFRESH RESULTS'}</span>
           </button>
         </div>
       </div>
