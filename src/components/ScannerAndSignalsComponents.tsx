@@ -82,12 +82,14 @@ export function SideBadge({ side }: { side?: 'LONG' | 'SHORT' | null }) {
 }
 
 // 5. Entry Status Badge
-export function EntryStatusBadge({ status }: { status: 'READY' | 'NEAR' | 'WATCH' }) {
+export function EntryStatusBadge({ status }: { status: Candidate['entryStatus'] }) {
   let styles = 'bg-[#238636]/10 text-[#238636] border-[#238636]/20';
   if (status === 'NEAR') {
     styles = 'bg-[#58A6FF]/10 text-[#58A6FF] border-[#58A6FF]/20';
   } else if (status === 'WATCH') {
     styles = 'bg-text-secondary/10 text-text-secondary border-text-secondary/20';
+  } else if (status === 'NOT_READY') {
+    styles = 'bg-[#DA3633]/10 text-[#DA3633] border-[#DA3633]/20';
   }
 
   return (
@@ -361,6 +363,7 @@ export function ScannerFilterPanel({ isCollapsed, setIsCollapsed, sectors, setup
                 <option value="READY">READY</option>
                 <option value="NEAR">NEAR</option>
                 <option value="WATCH">WATCH</option>
+                <option value="NOT_READY">NOT_READY</option>
               </select>
             </div>
 
@@ -1097,7 +1100,6 @@ export function SignalAnalysisDrawer({ id, onClose }: SignalAnalysisDrawerProps)
                 </div>
               </div>
             </div>
-
             {/* Price context summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-[#161B22]/20 p-2.5 rounded border border-border-dark/60 text-center">
