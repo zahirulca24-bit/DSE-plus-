@@ -64,7 +64,7 @@ test('unknown and none sources are not promoted to a verified source', () => {
 });
 
 test('backend canonical Reject grade normalizes to UI REJECT', () => {
-  const rejected: DseBackendCandidate = { symbol: 'ACI', grade: 'Reject', score: 40 };
+  const rejected = { symbol: 'ACI', grade: 'Reject', score: 40 } as unknown as DseBackendCandidate;
 
   assert.equal(normalizeSignalGrade('Reject'), 'REJECT');
   assert.equal(normalizeSignalGrade('A+'), 'A+');
