@@ -16,7 +16,7 @@ export interface Candidate {
   rsi: number;
   trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   emaAlignment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
-  entryStatus: 'READY' | 'NEAR' | 'WATCH';
+  entryStatus: 'READY' | 'NEAR' | 'WATCH' | 'NOT_READY';
   entryLow: number | null;
   entryHigh: number | null;
   stopLoss: number | null;
