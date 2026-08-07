@@ -17,7 +17,9 @@ export interface ApiResult<T> {
   error: string | null;
 }
 
-export type DseSignalGrade = 'A+' | 'A' | 'B+' | 'Reject' | 'REJECT';
+// Canonical backend wire grade and normalized frontend grade are intentionally distinct.
+export type DseApiSignalGrade = 'A+' | 'A' | 'B+' | 'Reject';
+export type DseSignalGrade = 'A+' | 'A' | 'B+' | 'REJECT';
 export type DseSignalStatus = 'qualified' | 'watch' | 'rejected';
 export type DseEntryStatus = 'READY' | 'NEAR' | 'WATCH' | 'NOT_READY';
 export type DseTrend = 'BULLISH' | 'BEARISH' | 'NEUTRAL';
