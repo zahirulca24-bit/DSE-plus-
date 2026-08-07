@@ -6,7 +6,7 @@ export interface Candidate {
   sector: string;
   setup: string;
   side: 'LONG' | 'SHORT' | null;
-  grade: 'A+' | 'A' | 'B+' | 'REJECT';
+  grade: 'A+' | 'A' | 'B+' | 'Reject' | 'REJECT';
   score: number;
   price: number;
   changePercent: number | null | undefined;
