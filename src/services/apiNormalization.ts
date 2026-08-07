@@ -1,5 +1,6 @@
 import {
   ApiResult,
+  DseApiSignalGrade,
   DseBackendCandidate,
   DseScannerLatestResponse,
   DseSignalGrade,
@@ -14,14 +15,17 @@ function normalizeSource(value: string): string {
   return normalized === 'database' ? 'database' : 'local_csv';
 }
 
-export function normalizeSignalGrade(value: DseSignalGrade): DseSignalGrade {
+export function normalizeSignalGrade(value: DseApiSignalGrade | DseSignalGrade): DseSignalGrade {
   return value === 'Reject' ? 'REJECT' : value;
 }
 
 function normalizeCandidate(candidate: DseBackendCandidate): DseBackendCandidate {
+  // Network JSON can contain the backend canonical `Reject` value even though
+  // downstream frontend state only accepts normalized UI grades.
+  const wireGrade = candidate.grade as DseApiSignalGrade | DseSignalGrade;
   return {
     ...candidate,
-    grade: normalizeSignalGrade(candidate.grade),
+    grade: normalizeSignalGrade(wireGrade),
   };
 }
 
