@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeScannerResult, normalizeSignalsResult } from '../src/services/apiNormalization';
-import type { ApiResult, DseScannerLatestResponse, DseSignalsResponse } from '../src/types/api';
+import {
+  normalizeScannerResult,
+  normalizeSignalGrade,
+  normalizeSignalsResult,
+} from '../src/services/apiNormalization';
+import type {
+  ApiResult,
+  DseBackendCandidate,
+  DseScannerLatestResponse,
+  DseSignalsResponse,
+} from '../src/types/api';
 
-function scannerResult(source: string): ApiResult<DseScannerLatestResponse> {
+function scannerResult(source: string, candidates: DseBackendCandidate[] = []): ApiResult<DseScannerLatestResponse> {
   return {
     ok: true,
     status: 200,
@@ -12,17 +21,17 @@ function scannerResult(source: string): ApiResult<DseScannerLatestResponse> {
       ok: true,
       mode: 'production',
       data_source: source,
-      scanned_symbols: 1,
-      eligible_symbols: 1,
+      scanned_symbols: candidates.length || 1,
+      eligible_symbols: candidates.length || 1,
       qualified_count: 1,
       watch_count: 0,
       rejected_count: 0,
-      candidates: [],
+      candidates,
     },
   };
 }
 
-function signalsResult(source: string): ApiResult<DseSignalsResponse> {
+function signalsResult(source: string, signals: DseBackendCandidate[] = []): ApiResult<DseSignalsResponse> {
   return {
     ok: true,
     status: 200,
@@ -30,7 +39,7 @@ function signalsResult(source: string): ApiResult<DseSignalsResponse> {
     data: {
       mode: 'production',
       data_source: source,
-      signals: [],
+      signals,
     },
   };
 }
@@ -52,6 +61,15 @@ test('unknown and none sources are not promoted to a verified source', () => {
     assert.equal(normalizeScannerResult(scannerResult(source)).data?.data_source, source);
     assert.equal(normalizeSignalsResult(signalsResult(source)).data?.data_source, source);
   }
+});
+
+test('backend canonical Reject grade normalizes to UI REJECT', () => {
+  const rejected = { symbol: 'ACI', grade: 'Reject', score: 40 } as unknown as DseBackendCandidate;
+
+  assert.equal(normalizeSignalGrade('Reject'), 'REJECT');
+  assert.equal(normalizeSignalGrade('A+'), 'A+');
+  assert.equal(normalizeScannerResult(scannerResult('database', [rejected])).data?.candidates[0]?.grade, 'REJECT');
+  assert.equal(normalizeSignalsResult(signalsResult('database', [rejected])).data?.signals[0]?.grade, 'REJECT');
 });
 
 test('null payloads remain unchanged', () => {

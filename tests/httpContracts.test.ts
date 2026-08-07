@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { extractApiError } from '../src/services/apiError';
 import { API_ENDPOINTS } from '../src/services/apiEndpoints';
+
+const dseApiSource = readFileSync(new URL('../src/services/dseApi.ts', import.meta.url), 'utf8');
 
 test('API error parser follows backend envelope precedence', () => {
   assert.equal(extractApiError({ detail: ' Detailed failure ' }, 400), 'Detailed failure');
@@ -23,6 +26,14 @@ test('core browser API endpoints remain read-only for scanner execution', () => 
   assert.equal(API_ENDPOINTS.dataStatus, '/data/status');
   assert.equal(API_ENDPOINTS.dataSource, '/data/source');
   assert.equal(API_ENDPOINTS.databaseStatus, '/db/status');
+});
+
+test('protected CSV preview requires the admin-token request contract', () => {
+  assert.match(dseApiSource, /previewOhlc: \(file: File, token: string\)/);
+  assert.match(
+    dseApiSource,
+    /apiPostForm<OhlcPreviewResponse>\(API_ENDPOINTS\.previewOhlc, fileForm\(file\), 120000, adminHeaders\(token\)\)/,
+  );
 });
 
 test('dynamic collector endpoints encode identifiers and preserve limits', () => {

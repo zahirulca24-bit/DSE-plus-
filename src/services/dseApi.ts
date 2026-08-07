@@ -44,7 +44,8 @@ export const dseApi = {
   scannerRun: async () => normalizeScannerResult(await apiGet<DseScannerLatestResponse>(API_ENDPOINTS.scannerLatest, 60000)),
   storageStatus,
   dataStatus: () => apiGet<DataStatusResponse>(API_ENDPOINTS.dataStatus, 60000),
-  previewOhlc: (file: File) => apiPostForm<OhlcPreviewResponse>(API_ENDPOINTS.previewOhlc, fileForm(file), 120000),
+  previewOhlc: (file: File, token: string) =>
+    apiPostForm<OhlcPreviewResponse>(API_ENDPOINTS.previewOhlc, fileForm(file), 120000, adminHeaders(token)),
   importProductionData: (file: File, token: string) =>
     apiPostForm<ProductionDataImportResponse>(API_ENDPOINTS.dataImport, fileForm(file), 300000, adminHeaders(token)),
   importOhlcToLocal,
